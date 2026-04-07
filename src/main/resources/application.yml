@@ -1,20 +1,41 @@
 spring:
+  application:
+    name: deepterview
+
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/deepterview
+    url: jdbc:mysql://localhost:3306/deepterview?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
     username: root
     password: '0000'
-  sql:
-    init:
-      mode: never
+    driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQLDialect
-        show_sql: true
         format_sql: true
-        use_sql_comments: true
-        default_batch_fetch_size: 1000
+        jdbc:
+          time_zone: Asia/Seoul
+    open-in-view: false
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+  config:
+    import: optional:application-secret.yml
+
+logging:
+  level:
+    org.hibernate.SQL: debug
+
+app:
+  file:
+    upload-dir: /uploads
+
+jwt:
+  secret: ${JWT_SECRET:}
+  access-token-expiration-ms: ${JWT_ACCESS_TOKEN_EXPIRATION_MS:3600000}
+  refresh-token-expiration-ms: ${JWT_REFRESH_TOKEN_EXPIRATION_MS:1209600000}
