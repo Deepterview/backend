@@ -53,5 +53,10 @@ public class User extends BaseTimeEntity {
 	public void softDelete(java.time.LocalDateTime deletedAt) {
 		this.deletedAt = deletedAt;
 	}
+
+	public void updateProfile(String name, String profileImageUrl) {
+		this.name = name;
+		this.profileImageUrl = profileImageUrl;
+	}
 }
 

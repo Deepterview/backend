@@ -12,6 +12,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import org.hibernate.annotations.SQLRestriction;
 
@@ -19,7 +20,12 @@ import java.time.LocalDateTime;
 
 @Getter
 @Entity
-@Table(name = "user_oauth")
+@Table(
+		name = "user_oauth",
+		uniqueConstraints = {
+				@UniqueConstraint(name = "uk_user_oauth_provider", columnNames = {"provider", "provider_id"})
+		}
+)
 @SQLRestriction("deleted_at is null")
 public class UserOauth extends BaseTimeEntity {
 
@@ -77,6 +83,11 @@ public class UserOauth extends BaseTimeEntity {
 		this.accessToken = accessToken;
 		this.refreshToken = refreshToken;
 		this.tokenExpiresAt = tokenExpiresAt;
+	}
+
+	public void clearRefreshToken() {
+		this.refreshToken = null;
+		this.tokenExpiresAt = null;
 	}
 
 	public void softDelete(LocalDateTime deletedAt) {

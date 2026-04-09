@@ -3,10 +3,10 @@ package com.capstone.deepterview.domain.answer.domain;
 public enum Emotion {
 	NEUTRAL,
 	HAPPY,
-	SURPRISED,
+	SURPRISE,
 	SAD,
-	FEARFUL,
-	DISGUSTED,
+	FEAR,
+	DISGUST,
 	ANGRY
 }
 
