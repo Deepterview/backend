@@ -70,5 +70,25 @@ public class AuthService {
 				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "존재하지 않는 refreshToken 입니다."));
 		userOauth.clearRefreshToken();
 	}
+
+	@Transactional
+	public TokenResponse testLogin(String email) {
+		User user = userRepository.findByEmail(email)
+				.orElseGet(() -> userRepository.save(
+						User.of(email, "테스트 유저", null)
+				));
+
+		UserOauth userOauth = userOauthRepository.findFirstByUserId(user.getId())
+				.orElseGet(() -> userOauthRepository.save(
+						UserOauth.of(user, OAuthProvider.KAKAO, "local-" + user.getId(), null, null, null)
+				));
+
+		String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
+		String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
+		LocalDateTime expiresAt = LocalDateTime.now().plusNanos(jwtTokenProvider.getRefreshTokenExpirationMs() * 1_000_000);
+		userOauth.updateTokens(accessToken, refreshToken, expiresAt);
+
+		return new TokenResponse(accessToken, refreshToken);
+	}
 }
 
