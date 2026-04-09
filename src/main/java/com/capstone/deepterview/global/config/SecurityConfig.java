@@ -10,6 +10,11 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -25,6 +30,7 @@ public class SecurityConfig {
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		http
 				.csrf(csrf -> csrf.disable())
+				.cors(cors -> cors.configurationSource(corsConfigurationSource()))
 				.formLogin(form -> form.disable())
 				.httpBasic(basic -> basic.disable())
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -33,11 +39,11 @@ public class SecurityConfig {
 						.accessDeniedHandler(securityExceptionHandler)
 				)
 				.authorizeHttpRequests(auth -> auth
+						.requestMatchers("/swagger-ui/**", "/swagger-resources/**", "/v3/api-docs/**").permitAll()
 						.requestMatchers("/api/v1/auth/**").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/v1/job-categories").permitAll()
 						.requestMatchers("/api/v1/internal/**").permitAll()
 						.requestMatchers("/oauth2/**", "/login/**").permitAll()
-						.requestMatchers("/swagger-ui/**", "/swagger-resources/**, /v3/api-docs/**").permitAll()
 						.anyRequest().authenticated()
 				)
 				.oauth2Login(oauth2 -> oauth2
@@ -47,6 +53,22 @@ public class SecurityConfig {
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
 		return http.build();
+	}
+
+	@Bean
+	public CorsConfigurationSource corsConfigurationSource() {
+		CorsConfiguration configuration = new CorsConfiguration();
+		configuration.setAllowedOrigins(List.of(
+				"http://localhost:3000",
+				"http://localhost:8080"
+		));
+		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+		configuration.setAllowedHeaders(List.of("*"));
+		configuration.setAllowCredentials(true);
+
+		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+		source.registerCorsConfiguration("/**", configuration);
+		return source;
 	}
 }
 
