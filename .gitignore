@@ -2,6 +2,7 @@ HELP.md
 .gradle
 build/
 application.yml
+application-test.yml
 application-secret.yml
 CLAUDE.md
 .cursor/
