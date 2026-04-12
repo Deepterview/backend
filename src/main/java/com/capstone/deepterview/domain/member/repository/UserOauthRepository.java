@@ -9,7 +9,7 @@ import java.util.Optional;
 
 public interface UserOauthRepository extends JpaRepository<UserOauth, Long> {
 	Optional<UserOauth> findByProviderAndProviderId(OAuthProvider provider, String providerId);
-	Optional<UserOauth> findFirstByUserId(Long userId);
+	Optional<UserOauth> findFirstByUser_Id(Long userId);
 
 	Optional<UserOauth> findByRefreshToken(String refreshToken);
 

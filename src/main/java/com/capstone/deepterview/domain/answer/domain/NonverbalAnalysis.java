@@ -68,5 +68,26 @@ public class NonverbalAnalysis extends BaseTimeEntity {
 		analysis.feedback = feedback;
 		return analysis;
 	}
+
+	/** 외부 비언어 분석 서버에서 재전송 시 기존 행을 갱신합니다. */
+	public void updateNonverbal(
+			Float eyeContactScore,
+			Float confidenceScore,
+			Float anxietyScore,
+			Float smileRatio,
+			Float headStabilityScore,
+			Emotion dominantEmotion,
+			String emotionDistributionJson,
+			String feedback
+	) {
+		this.eyeContactScore = eyeContactScore;
+		this.confidenceScore = confidenceScore;
+		this.anxietyScore = anxietyScore;
+		this.smileRatio = smileRatio;
+		this.headStabilityScore = headStabilityScore;
+		this.dominantEmotion = dominantEmotion;
+		this.emotionDistributionJson = emotionDistributionJson;
+		this.feedback = feedback;
+	}
 }
 

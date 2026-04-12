@@ -2,10 +2,16 @@ package com.capstone.deepterview.domain.interview.repository;
 
 import com.capstone.deepterview.domain.interview.domain.Question;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface QuestionRepository extends JpaRepository<Question, Long> {
 	List<Question> findBySessionIdOrderByOrderNumAsc(Long sessionId);
+
+	@Query("SELECT q FROM Question q JOIN FETCH q.session s JOIN FETCH s.user WHERE q.id = :id")
+	Optional<Question> findByIdWithSessionUser(@Param("id") Long id);
 }
 

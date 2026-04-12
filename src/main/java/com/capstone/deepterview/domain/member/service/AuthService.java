@@ -78,7 +78,7 @@ public class AuthService {
 						User.of(email, "테스트 유저", null)
 				));
 
-		UserOauth userOauth = userOauthRepository.findFirstByUserId(user.getId())
+		UserOauth userOauth = userOauthRepository.findFirstByUser_Id(user.getId())
 				.orElseGet(() -> userOauthRepository.save(
 						UserOauth.of(user, OAuthProvider.KAKAO, "local-" + user.getId(), null, null, null)
 				));

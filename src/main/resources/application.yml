@@ -36,6 +36,7 @@ logging:
 app:
   file:
     upload-dir: /uploads
+    answer-storage-dir: storage/answers
   oauth2:
     redirect-success-url: ${OAUTH2_REDIRECT_SUCCESS_URL:http://localhost:3000/oauth2/success}
 
