@@ -4,6 +4,7 @@ import com.capstone.deepterview.domain.answer.domain.*;
 import com.capstone.deepterview.domain.answer.dto.response.*;
 import com.capstone.deepterview.domain.answer.repository.*;
 import com.capstone.deepterview.domain.interview.repository.QuestionRepository;
+import com.capstone.deepterview.global.ai.LlmFeedbackService;
 import com.capstone.deepterview.global.exception.BusinessException;
 import com.capstone.deepterview.global.exception.CustomException;
 import com.capstone.deepterview.global.exception.ErrorCode;
@@ -34,6 +35,7 @@ public class AnswerService {
 	private final LlmFeedbackRepository llmFeedbackRepository;
 	private final AnswerAsyncAnalysisRunner answerAsyncAnalysisRunner;
 	private final ObjectMapper objectMapper;
+	private final LlmFeedbackService llmFeedbackService;
 
 	@Value("${app.file.answer-storage-dir}")
 	private String answerStorageDir;
@@ -94,7 +96,12 @@ public class AnswerService {
 
 		LlmFeedbackView llm = llmFeedbackRepository.findByAnswer_Id(answerId)
 				.map(this::toLlmView)
-				.orElse(null);
+				.orElseGet(() ->
+						llmFeedbackService.generateFeedback(
+								answer.getTranscript(),
+								answer.getQuestion().getContent()
+						)
+				);
 
 		return new AnswerAnalysisResponse(
 				answer.getId(),
