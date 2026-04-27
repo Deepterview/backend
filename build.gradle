@@ -28,6 +28,9 @@ dependencies {
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.0'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
+	// Spring AI - Anthropic
+	implementation 'org.springframework.ai:spring-ai-starter-model-anthropic'
+
 	// QueryDSL (Jakarta)
 	implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
 	annotationProcessor 'com.querydsl:querydsl-apt:5.0.0:jakarta'
@@ -49,6 +52,13 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'com.h2database:h2'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// dependencyManagement에 BOM 추가
+dependencyManagement {
+	imports {
+		mavenBom "org.springframework.ai:spring-ai-bom:1.0.0"
+	}
 }
 
 tasks.named('test') {
