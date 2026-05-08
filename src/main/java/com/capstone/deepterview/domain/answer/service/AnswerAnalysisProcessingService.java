@@ -58,7 +58,7 @@ public class AnswerAnalysisProcessingService {
 			));
 		}
 
-		if (llmFeedbackRepository.findByAnswer_Id(answerId).isEmpty()) {
+/*		if (llmFeedbackRepository.findByAnswer_Id(answerId).isEmpty()) {
 			llmFeedbackRepository.save(LlmFeedback.create(
 					answer,
 					"행동 단계를 구체적으로 설명했습니다.",
@@ -73,10 +73,10 @@ public class AnswerAnalysisProcessingService {
 					null,
 					null
 			));
-		}
+		}*/
 
 		if (answer.getTranscript() == null || answer.getTranscript().isBlank()) {
-			answer.updateTranscript("목업 STT 결과입니다.");
+			answer.updateTranscript("REST API는 자원을 URI로 표현하고 HTTP 메서드로 행위를 나타냅니다. GET은 조회, POST는 생성, PUT은 전체 수정, PATCH는 부분 수정, DELETE는 삭제에 사용합니다. 상태를 서버에 저장하지 않는 Stateless 원칙을 따르고, 응답에는 적절한 HTTP 상태 코드를 사용해야 합니다. 예를 들어 생성 성공은 201, 권한 없음은 403을 반환합니다. 저는 라이프집 프로젝트에서 API 설계할 때 URI에 동사 대신 명사를 사용하고 복수형으로 통일하는 컨벤션을 팀에 제안해서 적용했습니다.");
 		}
 	}
 
