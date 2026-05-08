@@ -9,6 +9,7 @@ public record MeResponse(
 		String email,
 		String name,
 		String profileImageUrl,
+		String bio,
 		LocalDateTime createdAt
 ) {
 	public static MeResponse from(User user) {
@@ -17,6 +18,7 @@ public record MeResponse(
 				user.getEmail(),
 				user.getName(),
 				user.getProfileImageUrl(),
+				user.getBio(),
 				user.getCreatedAt()
 		);
 	}

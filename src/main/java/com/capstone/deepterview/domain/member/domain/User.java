@@ -33,6 +33,8 @@ public class User extends BaseTimeEntity {
 	@Column(name = "profile_image_url", length = 500)
 	private String profileImageUrl;
 
+	private String bio;
+
 	@Column(name = "deleted_at")
 	private java.time.LocalDateTime deletedAt;
 
