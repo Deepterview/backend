@@ -68,7 +68,9 @@ public class AnswerService {
 		answer.updateTranscript("목업 STT 결과입니다.");
 		answerRepository.save(answer);
 
-		answerAsyncAnalysisRunner.runMockAnalyses(answer.getId());
+		String absolutePath = Paths.get(System.getProperty("user.dir")).resolve(storedPath)
+				.toAbsolutePath().normalize().toString().replace('\\', '/');
+		answerAsyncAnalysisRunner.runAnalyses(answer.getId(), absolutePath);
 
 		return SubmitAnswerResponse.of(answer);
 	}
