@@ -4,6 +4,7 @@ import com.capstone.deepterview.domain.answer.dto.request.NonverbalAnalysisCallb
 import com.capstone.deepterview.domain.answer.dto.response.NonverbalAnalysisCallbackResponse;
 import com.capstone.deepterview.domain.answer.service.NonverbalAnalysisCallbackService;
 import com.capstone.deepterview.global.common.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "비언어적 요소 컨트롤러")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/internal")

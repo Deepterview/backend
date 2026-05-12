@@ -9,6 +9,7 @@ import com.capstone.deepterview.domain.interview.dto.response.SessionStatusRespo
 import com.capstone.deepterview.domain.interview.service.InterviewService;
 import com.capstone.deepterview.domain.member.dto.response.UserPrincipal;
 import com.capstone.deepterview.global.common.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -16,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "면접 세션 컨트롤러")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/sessions")

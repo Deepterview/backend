@@ -4,6 +4,7 @@ import com.capstone.deepterview.domain.member.dto.request.TestLoginRequest;
 import com.capstone.deepterview.domain.member.dto.response.TokenResponse;
 import com.capstone.deepterview.domain.member.service.AuthService;
 import com.capstone.deepterview.global.common.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "로컬 인증 테스트용 컨트롤러")
 @Profile("local")
 @RestController
 @RequiredArgsConstructor

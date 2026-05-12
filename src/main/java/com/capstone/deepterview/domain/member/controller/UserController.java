@@ -4,6 +4,7 @@ import com.capstone.deepterview.domain.member.dto.response.MeResponse;
 import com.capstone.deepterview.domain.member.dto.response.UserPrincipal;
 import com.capstone.deepterview.domain.member.service.MemberService;
 import com.capstone.deepterview.global.common.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "유저 컨트롤러")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/users")

@@ -8,12 +8,14 @@ import com.capstone.deepterview.domain.member.dto.response.UserPrincipal;
 import com.capstone.deepterview.global.common.ApiResponse;
 import com.capstone.deepterview.global.exception.CustomException;
 import com.capstone.deepterview.global.exception.ErrorCode;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+@Tag(name = "면접 답변 컨트롤러")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/answers")
