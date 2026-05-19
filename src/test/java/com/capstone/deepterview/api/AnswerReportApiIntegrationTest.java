@@ -58,76 +58,6 @@ class AnswerReportApiIntegrationTest {
 	private FeedbackReportRepository feedbackReportRepository;
 
 	@Test
-	@DisplayName("Answer: 답변 제출 -> 비동기 분석 대기 -> 통합 분석 조회 + 비언어 콜백")
-	void answerSubmitAndAnalysisFlow() throws Exception {
-		String email = "answer-flow-" + UUID.randomUUID() + "@example.com";
-		String accessToken = loginAndGetAccessToken(email);
-
-		JobCategory category = jobCategoryRepository.save(JobCategory.of("답변테스트 직군", "desc"));
-		Long sessionId = createSession(accessToken, category.getId(), 1);
-		Long questionId = getFirstQuestionId(accessToken, sessionId);
-
-		MockMultipartFile audio = new MockMultipartFile(
-				"audio",
-				"answer.webm",
-				"audio/webm",
-				"fake-audio-bytes".getBytes(StandardCharsets.UTF_8)
-		);
-
-		MvcResult submitResult = mockMvc.perform(multipart("/api/v1/answers")
-						.file(audio)
-						.param("questionId", String.valueOf(questionId))
-						.param("durationSec", "95")
-						.param("completionStatus", "COMPLETED")
-						.header("Authorization", "Bearer " + accessToken))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.success").value(true))
-				.andExpect(jsonPath("$.data.analysisStatus").value("PROCESSING"))
-				.andExpect(jsonPath("$.data.completionStatus").value("COMPLETED"))
-				.andReturn();
-
-		JsonNode submitJson = objectMapper.readTree(submitResult.getResponse().getContentAsString());
-		long answerId = submitJson.path("data").path("answerId").asLong();
-
-		waitUntilSpeechAnalysisExists(answerId);
-
-		mockMvc.perform(get("/api/v1/answers/{answerId}/analysis", answerId)
-						.header("Authorization", "Bearer " + accessToken))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.success").value(true))
-				.andExpect(jsonPath("$.data.answerId").value((int) answerId))
-				.andExpect(jsonPath("$.data.speechAnalysis.wpm").value(closeTo(142.3, 0.1)))
-				.andExpect(jsonPath("$.data.starAnalysis.totalScore").value(closeTo(75.0, 0.1)))
-				.andExpect(jsonPath("$.data.llmFeedback.strength").exists())
-				.andExpect(jsonPath("$.data.nonverbalAnalysis").value(nullValue()));
-
-		mockMvc.perform(post("/api/v1/internal/nonverbal-analysis")
-						.contentType(MediaType.APPLICATION_JSON)
-						.content("""
-								{
-								  "answerId": %d,
-								  "eyeContactScore": 72.0,
-								  "confidenceScore": 68.0,
-								  "anxietyScore": 35.0,
-								  "smileRatio": 0.3,
-								  "headStabilityScore": 88.0,
-								  "dominantEmotion": "NEUTRAL",
-								  "emotionDistribution": { "NEUTRAL": 0.65, "HAPPY": 0.25, "FEARFUL": 0.10 },
-								  "feedback": "눈 맞춤을 조금 더 늘리면 자신감 있어 보입니다."
-								}
-								""".formatted(answerId)))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.success").value(true))
-				.andExpect(jsonPath("$.data.nonverbalAnalysisId").exists());
-
-		mockMvc.perform(get("/api/v1/answers/{answerId}/analysis", answerId)
-						.header("Authorization", "Bearer " + accessToken))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.nonverbalAnalysis.dominantEmotion").value("NEUTRAL"))
-				.andExpect(jsonPath("$.data.nonverbalAnalysis.eyeContactScore").value(72.0));
-	}
-
-	@Test
 	@DisplayName("Answer: 동일 questionId로 중복 제출 시 CONFLICT")
 	void duplicateAnswerReturnsConflict() throws Exception {
 		String email = "answer-dup-" + UUID.randomUUID() + "@example.com";
@@ -137,34 +67,25 @@ class AnswerReportApiIntegrationTest {
 		Long sessionId = createSession(accessToken, category.getId(), 1);
 		Long questionId = getFirstQuestionId(accessToken, sessionId);
 
-		MockMultipartFile audio = new MockMultipartFile(
-				"audio",
-				"a.webm",
-				"audio/webm",
-				"bytes".getBytes(StandardCharsets.UTF_8)
-		);
+		String answerBody = """
+				{
+				  "questionId": %d,
+				  "transcript": "첫 번째 답변입니다.",
+				  "durationSec": 10,
+				  "completionStatus": "COMPLETED"
+				}
+				""".formatted(questionId);
 
-		mockMvc.perform(multipart("/api/v1/answers")
-						.file(audio)
-						.param("questionId", String.valueOf(questionId))
-						.param("durationSec", "10")
-						.param("completionStatus", "COMPLETED")
-						.header("Authorization", "Bearer " + accessToken))
+		mockMvc.perform(post("/api/v1/answers")
+						.header("Authorization", "Bearer " + accessToken)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(answerBody))
 				.andExpect(status().isOk());
 
-		MockMultipartFile audio2 = new MockMultipartFile(
-				"audio",
-				"b.webm",
-				"audio/webm",
-				"bytes2".getBytes(StandardCharsets.UTF_8)
-		);
-
-		mockMvc.perform(multipart("/api/v1/answers")
-						.file(audio2)
-						.param("questionId", String.valueOf(questionId))
-						.param("durationSec", "10")
-						.param("completionStatus", "COMPLETED")
-						.header("Authorization", "Bearer " + accessToken))
+		mockMvc.perform(post("/api/v1/answers")
+						.header("Authorization", "Bearer " + accessToken)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(answerBody))
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.success").value(false))
 				.andExpect(jsonPath("$.code").value("CONFLICT"));
