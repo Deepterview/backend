@@ -62,7 +62,17 @@ dependencyManagement {
 }
 
 tasks.named('test') {
-	useJUnitPlatform()
+	useJUnitPlatform {
+		excludeTags 'eval'  // 실제 Claude API 호출 — 별도 실행: ./gradlew evalTest
+	}
+}
+
+tasks.register('evalTest', Test) {
+	useJUnitPlatform {
+		includeTags 'eval'
+	}
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
 }
 
 def querydslDir = layout.buildDirectory.dir("generated/querydsl").get().asFile
