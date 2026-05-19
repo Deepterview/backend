@@ -16,7 +16,6 @@ public record CreateSessionRequest(
 		@Min(value = 0, message = "careerYears는 0 이상이어야 합니다.")
 		int careerYears,
 
-		@NotNull(message = "sessionType은 필수입니다.")
 		SessionType sessionType,
 
 		@Min(value = 1, message = "totalQuestions는 1 이상이어야 합니다.")
