@@ -47,12 +47,18 @@ public class InterviewService {
 		// careerYears가 0이면 신입으로 취급합니다.
 		int normalizedCareerYears = Math.max(request.careerYears(), 0);
 
+		if (request.sessionType() != SessionType.TECHNICAL && request.sessionType() != null) {
+			throw new CustomException(ErrorCode.NOT_FOUND, "잘못된 세션 타입입니다.");
+		}
+
+		SessionType normalizedSessionType = SessionType.TECHNICAL;
+
 		InterviewSession session = InterviewSession.create(
 				user,
 				jobCategory,
 				request.jobTitle(),
 				normalizedCareerYears,
-				request.sessionType(),
+				normalizedSessionType,
 				request.totalQuestions()
 		);
 		interviewSessionRepository.save(session);
