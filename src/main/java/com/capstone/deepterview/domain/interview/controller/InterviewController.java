@@ -46,6 +46,10 @@ public class InterviewController {
 	}
 
 	@GetMapping("/{sessionId}")
+	@Operation(
+			summary = "세션 단건 조회",
+			description = "세션에서 답변한 질문들도 모두 함께 조회됩니다."
+	)
 	public ApiResponse<SessionDetailResponse> getSessionDetail(
 			@AuthenticationPrincipal UserPrincipal principal,
 			@PathVariable Long sessionId

@@ -80,7 +80,7 @@ public class InterviewService {
 	@Transactional(readOnly = true)
 	public SessionDetailResponse getSessionDetail(Long userId, Long sessionId) {
 		InterviewSession session = getOwnedSession(userId, sessionId);
-		List<QuestionResponse> questions = questionRepository.findBySessionIdOrderByOrderNumAsc(sessionId)
+		List<QuestionResponse> questions = questionRepository.findBySessionIdWithAnswerOrderByOrderNumAsc(sessionId)
 				.stream()
 				.map(QuestionResponse::from)
 				.toList();
