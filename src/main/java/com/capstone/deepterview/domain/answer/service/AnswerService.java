@@ -5,6 +5,7 @@ import com.capstone.deepterview.domain.answer.dto.request.SubmitAnswerRequest;
 import com.capstone.deepterview.domain.answer.dto.response.*;
 import com.capstone.deepterview.domain.answer.repository.*;
 import com.capstone.deepterview.domain.interview.repository.QuestionRepository;
+import com.capstone.deepterview.global.ai.LlmAnalysisResult;
 import com.capstone.deepterview.global.ai.LlmFeedbackService;
 import com.capstone.deepterview.global.exception.BusinessException;
 import com.capstone.deepterview.global.exception.CustomException;
@@ -83,7 +84,7 @@ public class AnswerService {
 		answer.updateAudio(storedPath, answer.getDurationSec());
 	}
 
-	@Transactional(readOnly = true)
+	@Transactional
 	public AnswerAnalysisResponse getAnalysis(Long userId, Long answerId) {
 		Answer answer = answerRepository.findByIdWithQuestionSessionUser(answerId)
 				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "답변을 찾을 수 없습니다."));
@@ -96,22 +97,58 @@ public class AnswerService {
 				.map(this::toSpeechView)
 				.orElse(null);
 
-		StarAnalysisView star = starAnalysisRepository.findByAnswer_Id(answerId)
-				.map(this::toStarView)
-				.orElse(null);
-
 		NonverbalAnalysisView nonverbal = nonverbalAnalysisRepository.findByAnswer_Id(answerId)
 				.map(this::toNonverbalView)
 				.orElse(null);
 
-		LlmFeedbackView llm = llmFeedbackRepository.findByAnswer_Id(answerId)
-				.map(this::toLlmView)
-				.orElseGet(() ->
-						llmFeedbackService.generateFeedback(
-								answer.getTranscript(),
-								answer.getQuestion().getContent()
-						)
-				);
+		Optional<LlmFeedback> existingLlm = llmFeedbackRepository.findByAnswer_Id(answerId);
+		Optional<StarAnalysis> existingStar = starAnalysisRepository.findByAnswer_Id(answerId);
+
+		LlmFeedbackView llm;
+		StarAnalysisView star;
+
+		if (existingLlm.isPresent()) {
+			llm = toLlmView(existingLlm.get());
+			star = existingStar.map(this::toStarView).orElse(null);
+		} else {
+			LlmAnalysisResult result = llmFeedbackService.generateAnalysis(
+					answer.getTranscript(),
+					answer.getQuestion().getContent()
+			);
+
+			LlmAnalysisResult.FeedbackPart fp = result.feedback();
+			List<String> followups = (fp != null && fp.followupQuestions() != null) ? fp.followupQuestions() : List.of();
+			LlmFeedback savedLlm = llmFeedbackRepository.save(LlmFeedback.create(
+					answer,
+					fp != null ? fp.strength() : null,
+					fp != null ? fp.weakness() : null,
+					fp != null ? fp.improvement() : null,
+					followups.size() > 0 ? followups.get(0) : null,
+					followups.size() > 1 ? followups.get(1) : null,
+					followups.size() > 2 ? followups.get(2) : null,
+					null, null, null, null, null
+			));
+			llm = toLlmView(savedLlm);
+
+			if (result.star() != null) {
+				LlmAnalysisResult.StarPart sp = result.star();
+				StarAnalysis savedStar = starAnalysisRepository.save(StarAnalysis.create(
+						answer,
+						sp.situationScore(),
+						sp.taskScore(),
+						sp.actionScore(),
+						sp.resultScore(),
+						calculateStarTotalScore(sp),
+						sp.situationFeedback(),
+						sp.taskFeedback(),
+						sp.actionFeedback(),
+						sp.resultFeedback()
+				));
+				star = toStarView(savedStar);
+			} else {
+				star = null;
+			}
+		}
 
 		return new AnswerAnalysisResponse(
 				answer.getId(),
@@ -122,6 +159,16 @@ public class AnswerService {
 				nonverbal,
 				llm
 		);
+	}
+
+	private float calculateStarTotalScore(LlmAnalysisResult.StarPart sp) {
+		float sum = 0;
+		int count = 0;
+		if (sp.situationScore() != null) { sum += sp.situationScore(); count++; }
+		if (sp.taskScore() != null) { sum += sp.taskScore(); count++; }
+		if (sp.actionScore() != null) { sum += sp.actionScore(); count++; }
+		if (sp.resultScore() != null) { sum += sp.resultScore(); count++; }
+		return count > 0 ? sum / count : 0f;
 	}
 
 	private String storeVideoFile(MultipartFile file) {

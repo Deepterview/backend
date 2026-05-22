@@ -17,13 +17,13 @@ public class LlmFeedback extends BaseTimeEntity {
 	@JoinColumn(name = "answer_id", unique = true)
 	private Answer answer;
 
-	@Lob
+	@Column(columnDefinition = "LONGTEXT")
 	private String strength;
 
-	@Lob
+	@Column(columnDefinition = "LONGTEXT")
 	private String weakness;
 
-	@Lob
+	@Column(columnDefinition = "LONGTEXT")
 	private String improvement;
 
 	@Column(name = "followup_question_1", length = 500)
@@ -44,12 +44,10 @@ public class LlmFeedback extends BaseTimeEntity {
 	@Column(name = "completion_tokens")
 	private Integer completionTokens;
 
-	@Lob
-	@Column(name = "raw_prompt")
+	@Column(name = "raw_prompt", columnDefinition = "LONGTEXT")
 	private String rawPrompt;
 
-	@Lob
-	@Column(name = "raw_response")
+	@Column(name = "raw_response", columnDefinition = "LONGTEXT")
 	private String rawResponse;
 
 	protected LlmFeedback() {
