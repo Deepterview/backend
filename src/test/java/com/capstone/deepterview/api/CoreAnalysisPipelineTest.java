@@ -1,9 +1,9 @@
 package com.capstone.deepterview.api;
 
-import com.capstone.deepterview.domain.answer.dto.response.LlmFeedbackView;
 import com.capstone.deepterview.domain.answer.repository.SpeechAnalysisRepository;
 import com.capstone.deepterview.domain.interview.domain.JobCategory;
 import com.capstone.deepterview.domain.interview.repository.JobCategoryRepository;
+import com.capstone.deepterview.global.ai.LlmAnalysisResult;
 import com.capstone.deepterview.global.ai.LlmFeedbackService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -53,13 +53,14 @@ class CoreAnalysisPipelineTest {
 
     @BeforeEach
     void stubLlmFeedback() {
-        when(llmFeedbackService.generateFeedback(any(), any()))
-                .thenReturn(new LlmFeedbackView(
-                        "답변 구조가 명확합니다.",
-                        "결과 수치가 부족합니다.",
-                        "STAR 기법의 Result를 보강하세요.",
-                        List.of("가장 어려웠던 점은?", "팀 갈등을 어떻게 해결했나요?")
-                ));
+        var feedbackPart = new LlmAnalysisResult.FeedbackPart(
+                "답변 구조가 명확합니다.",
+                "결과 수치가 부족합니다.",
+                "STAR 기법의 Result를 보강하세요.",
+                List.of("가장 어려웠던 점은?", "팀 갈등을 어떻게 해결했나요?")
+        );
+        when(llmFeedbackService.generateAnalysis(any(), any()))
+                .thenReturn(new LlmAnalysisResult(feedbackPart, null));
     }
 
     // ── 테스트 1: 전체 파이프라인 ──────────────────────────────────────────

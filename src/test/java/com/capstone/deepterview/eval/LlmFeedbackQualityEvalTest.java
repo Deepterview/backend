@@ -1,6 +1,7 @@
 package com.capstone.deepterview.eval;
 
 import com.capstone.deepterview.domain.answer.dto.response.LlmFeedbackView;
+import com.capstone.deepterview.global.ai.LlmAnalysisResult;
 import com.capstone.deepterview.global.ai.LlmFeedbackService;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -104,7 +105,14 @@ class LlmFeedbackQualityEvalTest {
             String description
     ) {
         // 1. 실제 LLM 피드백 생성
-        LlmFeedbackView feedback = llmFeedbackService.generateFeedback(answer, question);
+        LlmAnalysisResult analysisResult = llmFeedbackService.generateAnalysis(answer, question);
+        LlmAnalysisResult.FeedbackPart fp = analysisResult.feedback();
+        LlmFeedbackView feedback = new LlmFeedbackView(
+                fp != null ? fp.strength() : null,
+                fp != null ? fp.weakness() : null,
+                fp != null ? fp.improvement() : null,
+                fp != null && fp.followupQuestions() != null ? fp.followupQuestions() : List.of()
+        );
 
         assertThat(feedback.strength())
                 .as("피드백 파싱 실패 — strength가 null")
