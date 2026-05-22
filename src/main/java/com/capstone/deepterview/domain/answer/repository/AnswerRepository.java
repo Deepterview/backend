@@ -17,4 +17,14 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
 
 	@Query("SELECT a FROM Answer a JOIN a.question q WHERE q.session.id = :sessionId AND a.audioFilePath IS NOT NULL")
 	List<Answer> findBySessionIdWithVideoPath(@Param("sessionId") Long sessionId);
+
+	@Query("SELECT a FROM Answer a " +
+			"JOIN FETCH a.question q " +
+			"LEFT JOIN FETCH a.speechAnalysis " +
+			"LEFT JOIN FETCH a.nonverbalAnalysis " +
+			"LEFT JOIN FETCH a.starAnalysis " +
+			"LEFT JOIN FETCH a.llmFeedback " +
+			"WHERE q.session.id = :sessionId " +
+			"ORDER BY q.orderNum ASC")
+	List<Answer> findBySessionIdWithAnalyses(@Param("sessionId") Long sessionId);
 }

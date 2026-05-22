@@ -5,13 +5,18 @@ import com.capstone.deepterview.domain.answer.repository.AnswerRepository;
 import com.capstone.deepterview.domain.answer.service.AnswerAsyncAnalysisRunner;
 import com.capstone.deepterview.domain.interview.domain.*;
 import com.capstone.deepterview.domain.interview.dto.request.CreateSessionRequest;
-import com.capstone.deepterview.domain.interview.dto.response.*;
+import com.capstone.deepterview.domain.interview.dto.response.CreateSessionResponse;
+import com.capstone.deepterview.domain.interview.dto.response.JobCategoryResponse;
+import com.capstone.deepterview.domain.interview.dto.response.QuestionResponse;
+import com.capstone.deepterview.domain.interview.dto.response.SessionDetailResponse;
+import com.capstone.deepterview.domain.interview.dto.response.SessionListResponse;
+import com.capstone.deepterview.domain.interview.dto.response.SessionListItemResponse;
+import com.capstone.deepterview.domain.interview.dto.response.SessionStatusResponse;
 import com.capstone.deepterview.domain.interview.repository.InterviewSessionRepository;
 import com.capstone.deepterview.domain.interview.repository.JobCategoryRepository;
 import com.capstone.deepterview.domain.interview.repository.QuestionRepository;
 import com.capstone.deepterview.domain.member.domain.User;
 import com.capstone.deepterview.domain.member.repository.UserRepository;
-import com.capstone.deepterview.domain.report.repository.FeedbackReportRepository;
 import com.capstone.deepterview.global.exception.CustomException;
 import com.capstone.deepterview.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +37,6 @@ public class InterviewService {
 	private final QuestionRepository questionRepository;
 	private final JobCategoryRepository jobCategoryRepository;
 	private final UserRepository userRepository;
-	private final FeedbackReportRepository feedbackReportRepository;
 	private final AnswerRepository answerRepository;
 	private final AnswerAsyncAnalysisRunner answerAsyncAnalysisRunner;
 
@@ -119,17 +123,6 @@ public class InterviewService {
 		LocalDateTime now = LocalDateTime.now();
 		session.softDelete(now);
 		questionRepository.findBySessionIdOrderByOrderNumAsc(sessionId).forEach(question -> question.softDelete(now));
-	}
-
-	@Transactional(readOnly = true)
-	public SessionReportResponse getSessionReport(Long userId, Long sessionId) {
-		InterviewSession session = getOwnedSession(userId, sessionId);
-		if (session.getStatus() != SessionStatus.COMPLETED) {
-			throw new CustomException(ErrorCode.VALIDATION_ERROR, "세션이 완료되지 않아 리포트를 조회할 수 없습니다.");
-		}
-		return feedbackReportRepository.findBySession_Id(sessionId)
-				.map(SessionReportResponse::of)
-				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "종합 리포트가 아직 생성되지 않았습니다."));
 	}
 
 	@Transactional(readOnly = true)
