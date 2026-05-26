@@ -50,6 +50,11 @@ public class AnswerController {
 	}
 
 	@GetMapping("/{answerId}/analysis")
+	@Operation(
+			summary = "각 답변별 LLM 피드백 API",
+			description = "기존 LLM 피드백이 있으면 조회하고 없으면 새로 생성하여 반환합니다. " +
+					"피드백은 (1) 언어적 피드백 (답변 속도, 정확도 등), (2) STAR 기법 피드백 (3) 비언어적 피드백 (표정, 아이컨택 등) 을 제공합니다."
+	)
 	public ApiResponse<AnswerAnalysisResponse> getAnalysis(
 			@AuthenticationPrincipal UserPrincipal principal,
 			@PathVariable Long answerId

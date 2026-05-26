@@ -4,6 +4,7 @@ import com.capstone.deepterview.domain.member.dto.request.TestLoginRequest;
 import com.capstone.deepterview.domain.member.dto.response.TokenResponse;
 import com.capstone.deepterview.domain.member.service.AuthService;
 import com.capstone.deepterview.global.common.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,9 @@ public class LocalTestAuthController {
 	private final AuthService authService;
 
 	@PostMapping("/test-login")
+	@Operation(
+			summary = "테스트용 로그인 API"
+	)
 	public ApiResponse<TokenResponse> testLogin(@Valid @RequestBody TestLoginRequest request) {
 		return ApiResponse.success(authService.testLogin(request.email()));
 	}

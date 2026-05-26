@@ -28,6 +28,10 @@ public class InterviewController {
 	private final InterviewService interviewService;
 
 	@PostMapping
+	@Operation(
+			summary = "세션 생성 API",
+			description = "세션을 생성합니다."
+	)
 	public ApiResponse<CreateSessionResponse> createSession(
 			@AuthenticationPrincipal UserPrincipal principal,
 			@Valid @RequestBody CreateSessionRequest request
@@ -36,6 +40,10 @@ public class InterviewController {
 	}
 
 	@GetMapping
+	@Operation(
+			summary = "세션 리스트 조회 API",
+			description = "전체 세션을 리스트 형태로 조회합니다."
+	)
 	public ApiResponse<SessionListResponse> getSessions(
 			@AuthenticationPrincipal UserPrincipal principal,
 			@RequestParam(defaultValue = "0") int page,
@@ -59,6 +67,10 @@ public class InterviewController {
 	}
 
 	@PatchMapping("/{sessionId}/start")
+	@Operation(
+			summary = "세션 시작 API",
+			description = "세션 상태를 'IN_PROGRESS'로 변경합니다."
+	)
 	public ApiResponse<SessionStatusResponse> startSession(
 			@AuthenticationPrincipal UserPrincipal principal,
 			@PathVariable Long sessionId
@@ -67,6 +79,10 @@ public class InterviewController {
 	}
 
 	@PatchMapping("/{sessionId}/end")
+	@Operation(
+			summary = "세션 종료 API",
+			description = "세션 상태를 'COMPLETED'로 변경합니다."
+	)
 	public ApiResponse<SessionStatusResponse> endSession(
 			@AuthenticationPrincipal UserPrincipal principal,
 			@PathVariable Long sessionId
@@ -75,6 +91,10 @@ public class InterviewController {
 	}
 
 	@DeleteMapping("/{sessionId}")
+	@Operation(
+			summary = "세션 삭제 API",
+			description = "세션을 삭제합니다. Soft Delete 방식을 적용하여 deletedAt 필드를 now로 업데이트합니다."
+	)
 	public ApiResponse<Void> deleteSession(
 			@AuthenticationPrincipal UserPrincipal principal,
 			@PathVariable Long sessionId
