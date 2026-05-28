@@ -1,7 +1,9 @@
 package com.capstone.deepterview.domain.answer.service;
 
+import com.capstone.deepterview.domain.answer.domain.Emotion;
 import com.capstone.deepterview.domain.answer.domain.NonverbalAnalysis;
 import com.capstone.deepterview.domain.answer.domain.SpeechAnalysis;
+import com.capstone.deepterview.domain.answer.dto.request.NonverbalSummary;
 import com.capstone.deepterview.domain.answer.dto.request.PythonAnalysisCallbackRequest;
 import com.capstone.deepterview.domain.answer.dto.request.PythonAnalysisResult;
 import com.capstone.deepterview.domain.answer.dto.request.PythonTranscriptionResult;
@@ -58,13 +60,28 @@ public class PythonAnalysisCallbackService {
             ));
         }
 
-        List<Map<String, Object>> gazeFrames = result.gazeFrames();
-        int frameCount = result.frameCount() != null ? result.frameCount() : 0;
-        if (gazeFrames != null && !gazeFrames.isEmpty() && frameCount > 0) {
+        NonverbalSummary summary = result.nonverbalSummary();
+        if (summary != null) {
             if (nonverbalAnalysisRepository.findByAnswer_Id(answerId).isEmpty()) {
-                Float eyeContactScore = (float) gazeFrames.size() / frameCount * 100f;
+                Emotion dominantEmotion = null;
+                try {
+                    if (summary.dominantEmotion() != null) {
+                        dominantEmotion = Emotion.valueOf(summary.dominantEmotion().toUpperCase());
+                    }
+                } catch (IllegalArgumentException e) {
+                    log.warn("알 수 없는 감정값: {}", summary.dominantEmotion());
+                }
+
                 nonverbalAnalysisRepository.save(NonverbalAnalysis.create(
-                        answer, eyeContactScore, null, null, null, null, null, null, null
+                        answer,
+                        summary.eyeContactScore(),
+                        summary.confidenceScore(),
+                        summary.anxietyScore(),
+                        summary.smileRatio(),
+                        summary.headStabilityScore(),
+                        dominantEmotion,
+                        summary.emotionDistributionJson(),
+                        null  // feedback
                 ));
             }
         }

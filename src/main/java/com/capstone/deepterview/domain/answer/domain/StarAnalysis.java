@@ -32,20 +32,16 @@ public class StarAnalysis extends BaseTimeEntity {
 	@Column(name = "total_score")
 	private Float totalScore;
 
-	@Lob
-	@Column(name = "situation_feedback")
+	@Column(name = "situation_feedback", columnDefinition = "LONGTEXT")
 	private String situationFeedback;
 
-	@Lob
-	@Column(name = "task_feedback")
+	@Column(name = "task_feedback", columnDefinition = "LONGTEXT")
 	private String taskFeedback;
 
-	@Lob
-	@Column(name = "action_feedback")
+	@Column(name = "action_feedback", columnDefinition = "LONGTEXT")
 	private String actionFeedback;
 
-	@Lob
-	@Column(name = "result_feedback")
+	@Column(name = "result_feedback", columnDefinition = "LONGTEXT")
 	private String resultFeedback;
 
 	protected StarAnalysis() {

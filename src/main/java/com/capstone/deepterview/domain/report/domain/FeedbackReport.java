@@ -38,20 +38,16 @@ public class FeedbackReport extends BaseTimeEntity {
 	@Column(name = "grade", length = 2)
 	private Grade grade;
 
-	@Lob
-	@Column(name = "strength_summary")
+	@Column(name = "strength_summary", columnDefinition = "LONGTEXT")
 	private String strengthSummary;
 
-	@Lob
-	@Column(name = "weakness_summary")
+	@Column(name = "weakness_summary", columnDefinition = "LONGTEXT")
 	private String weaknessSummary;
 
-	@Lob
-	@Column(name = "improvement_priority")
+	@Column(name = "improvement_priority", columnDefinition = "LONGTEXT")
 	private String improvementPriority;
 
-	@Lob
-	@Column(name = "ai_summary")
+	@Column(name = "ai_summary", columnDefinition = "LONGTEXT")
 	private String aiSummary;
 
 	@Column(name = "deleted_at")

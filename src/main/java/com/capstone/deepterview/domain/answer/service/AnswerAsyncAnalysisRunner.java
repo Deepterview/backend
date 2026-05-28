@@ -14,7 +14,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AnswerAsyncAnalysisRunner {
 
-    private final AnswerAnalysisProcessingService answerAnalysisProcessingService;
     private final RestTemplate restTemplate;
 
     @Value("${app.python.base-url}")
@@ -24,9 +23,7 @@ public class AnswerAsyncAnalysisRunner {
     private String callbackBaseUrl;
 
     @Async
-    public void runAnalyses(Long answerId, String filePath) {
-        answerAnalysisProcessingService.saveMockStarAnalysis(answerId);
-
+    public void runVideoAnalysis(Long answerId, String filePath) {
         try {
             Map<String, String> body = Map.of(
                     "interview_id", String.valueOf(answerId),
@@ -35,7 +32,7 @@ public class AnswerAsyncAnalysisRunner {
             );
             restTemplate.postForObject(pythonBaseUrl + "/api/v1/analyze", body, Map.class);
         } catch (Exception e) {
-            log.error("Python 분석 요청 실패 answerId={}", answerId, e);
+            log.error("Python 영상 분석 요청 실패 answerId={}", answerId, e);
         }
     }
 }

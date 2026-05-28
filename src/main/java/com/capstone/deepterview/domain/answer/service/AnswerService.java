@@ -1,9 +1,11 @@
 package com.capstone.deepterview.domain.answer.service;
 
 import com.capstone.deepterview.domain.answer.domain.*;
+import com.capstone.deepterview.domain.answer.dto.request.SubmitAnswerRequest;
 import com.capstone.deepterview.domain.answer.dto.response.*;
 import com.capstone.deepterview.domain.answer.repository.*;
 import com.capstone.deepterview.domain.interview.repository.QuestionRepository;
+import com.capstone.deepterview.global.ai.LlmAnalysisResult;
 import com.capstone.deepterview.global.ai.LlmFeedbackService;
 import com.capstone.deepterview.global.exception.BusinessException;
 import com.capstone.deepterview.global.exception.CustomException;
@@ -33,7 +35,6 @@ public class AnswerService {
 	private final StarAnalysisRepository starAnalysisRepository;
 	private final NonverbalAnalysisRepository nonverbalAnalysisRepository;
 	private final LlmFeedbackRepository llmFeedbackRepository;
-	private final AnswerAsyncAnalysisRunner answerAsyncAnalysisRunner;
 	private final ObjectMapper objectMapper;
 	private final LlmFeedbackService llmFeedbackService;
 
@@ -41,41 +42,49 @@ public class AnswerService {
 	private String answerStorageDir;
 
 	@Transactional
-	public SubmitAnswerResponse submitAnswer(
-			Long userId,
-			Long questionId,
-			MultipartFile audio,
-			int durationSec,
-			CompletionStatus completionStatus
-	) {
-		var question = questionRepository.findByIdWithSessionUser(questionId)
+	public SubmitAnswerResponse submitAnswer(Long userId, SubmitAnswerRequest request) {
+		var question = questionRepository.findByIdWithSessionUser(request.questionId())
 				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "질문을 찾을 수 없습니다."));
 
 		if (!question.getSession().getUser().getId().equals(userId)) {
 			throw new CustomException(ErrorCode.FORBIDDEN, "해당 질문에 답변할 권한이 없습니다.");
 		}
 
-		if (answerRepository.existsByQuestion_Id(questionId)) {
+		if (answerRepository.existsByQuestion_Id(request.questionId())) {
 			throw new BusinessException(ErrorCode.CONFLICT, "이미 해당 질문에 대한 답변이 존재합니다.");
 		}
 
-		if (audio == null || audio.isEmpty()) {
-			throw new CustomException(ErrorCode.VALIDATION_ERROR, "음성 파일은 필수입니다.");
+		CompletionStatus status;
+		try {
+			status = CompletionStatus.valueOf(request.completionStatus());
+		} catch (IllegalArgumentException e) {
+			throw new CustomException(ErrorCode.VALIDATION_ERROR, "유효하지 않은 completionStatus 입니다.");
 		}
 
-		String storedPath = storeAudioFile(audio);
-		Answer answer = Answer.create(question, storedPath, null, durationSec, completionStatus);
-		answer.updateTranscript("목업 STT 결과입니다.");
+		Answer answer = Answer.create(question, null, request.transcript(), request.durationSec(), status);
 		answerRepository.save(answer);
-
-		String absolutePath = Paths.get(System.getProperty("user.dir")).resolve(storedPath)
-				.toAbsolutePath().normalize().toString().replace('\\', '/');
-		answerAsyncAnalysisRunner.runAnalyses(answer.getId(), absolutePath);
 
 		return SubmitAnswerResponse.of(answer);
 	}
 
-	@Transactional(readOnly = true)
+	@Transactional
+	public void uploadVideo(Long userId, Long answerId, MultipartFile video) {
+		Answer answer = answerRepository.findByIdWithQuestionSessionUser(answerId)
+				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "답변을 찾을 수 없습니다."));
+
+		if (!answer.getQuestion().getSession().getUser().getId().equals(userId)) {
+			throw new CustomException(ErrorCode.FORBIDDEN, "해당 답변에 영상을 업로드할 권한이 없습니다.");
+		}
+
+		if (video == null || video.isEmpty()) {
+			throw new CustomException(ErrorCode.VALIDATION_ERROR, "영상 파일은 필수입니다.");
+		}
+
+		String storedPath = storeVideoFile(video);
+		answer.updateAudio(storedPath, answer.getDurationSec());
+	}
+
+	@Transactional
 	public AnswerAnalysisResponse getAnalysis(Long userId, Long answerId) {
 		Answer answer = answerRepository.findByIdWithQuestionSessionUser(answerId)
 				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "답변을 찾을 수 없습니다."));
@@ -88,22 +97,58 @@ public class AnswerService {
 				.map(this::toSpeechView)
 				.orElse(null);
 
-		StarAnalysisView star = starAnalysisRepository.findByAnswer_Id(answerId)
-				.map(this::toStarView)
-				.orElse(null);
-
 		NonverbalAnalysisView nonverbal = nonverbalAnalysisRepository.findByAnswer_Id(answerId)
 				.map(this::toNonverbalView)
 				.orElse(null);
 
-		LlmFeedbackView llm = llmFeedbackRepository.findByAnswer_Id(answerId)
-				.map(this::toLlmView)
-				.orElseGet(() ->
-						llmFeedbackService.generateFeedback(
-								answer.getTranscript(),
-								answer.getQuestion().getContent()
-						)
-				);
+		Optional<LlmFeedback> existingLlm = llmFeedbackRepository.findByAnswer_Id(answerId);
+		Optional<StarAnalysis> existingStar = starAnalysisRepository.findByAnswer_Id(answerId);
+
+		LlmFeedbackView llm;
+		StarAnalysisView star;
+
+		if (existingLlm.isPresent()) {
+			llm = toLlmView(existingLlm.get());
+			star = existingStar.map(this::toStarView).orElse(null);
+		} else {
+			LlmAnalysisResult result = llmFeedbackService.generateAnalysis(
+					answer.getTranscript(),
+					answer.getQuestion().getContent()
+			);
+
+			LlmAnalysisResult.FeedbackPart fp = result.feedback();
+			List<String> followups = (fp != null && fp.followupQuestions() != null) ? fp.followupQuestions() : List.of();
+			LlmFeedback savedLlm = llmFeedbackRepository.save(LlmFeedback.create(
+					answer,
+					fp != null ? fp.strength() : null,
+					fp != null ? fp.weakness() : null,
+					fp != null ? fp.improvement() : null,
+					followups.size() > 0 ? followups.get(0) : null,
+					followups.size() > 1 ? followups.get(1) : null,
+					followups.size() > 2 ? followups.get(2) : null,
+					null, null, null, null, null
+			));
+			llm = toLlmView(savedLlm);
+
+			if (result.star() != null) {
+				LlmAnalysisResult.StarPart sp = result.star();
+				StarAnalysis savedStar = starAnalysisRepository.save(StarAnalysis.create(
+						answer,
+						sp.situationScore(),
+						sp.taskScore(),
+						sp.actionScore(),
+						sp.resultScore(),
+						calculateStarTotalScore(sp),
+						sp.situationFeedback(),
+						sp.taskFeedback(),
+						sp.actionFeedback(),
+						sp.resultFeedback()
+				));
+				star = toStarView(savedStar);
+			} else {
+				star = null;
+			}
+		}
 
 		return new AnswerAnalysisResponse(
 				answer.getId(),
@@ -116,7 +161,17 @@ public class AnswerService {
 		);
 	}
 
-	private String storeAudioFile(MultipartFile audio) {
+	private float calculateStarTotalScore(LlmAnalysisResult.StarPart sp) {
+		float sum = 0;
+		int count = 0;
+		if (sp.situationScore() != null) { sum += sp.situationScore(); count++; }
+		if (sp.taskScore() != null) { sum += sp.taskScore(); count++; }
+		if (sp.actionScore() != null) { sum += sp.actionScore(); count++; }
+		if (sp.resultScore() != null) { sum += sp.resultScore(); count++; }
+		return count > 0 ? sum / count : 0f;
+	}
+
+	private String storeVideoFile(MultipartFile file) {
 		try {
 			Path projectRoot = Paths.get(System.getProperty("user.dir")).normalize();
 			Path dir = Paths.get(answerStorageDir);
@@ -126,12 +181,12 @@ public class AnswerService {
 			dir = dir.normalize();
 			Files.createDirectories(dir);
 
-			String original = Optional.of(audio.getOriginalFilename()).orElse("audio");
+			String original = Optional.ofNullable(file.getOriginalFilename()).orElse("video");
 			String ext = extractExtension(original);
 			String filename = UUID.randomUUID() + ext;
 
 			Path target = dir.resolve(filename);
-			audio.transferTo(target);
+			file.transferTo(target);
 
 			Path absoluteFile = target.toAbsolutePath().normalize();
 			try {
@@ -140,7 +195,7 @@ public class AnswerService {
 				return absoluteFile.toString().replace('\\', '/');
 			}
 		} catch (IOException e) {
-			throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR, "음성 파일 저장에 실패했습니다.");
+			throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR, "영상 파일 저장에 실패했습니다.");
 		}
 	}
 

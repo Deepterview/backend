@@ -8,7 +8,9 @@ public record QuestionResponse(
 		int orderNum,
 		String content,
 		QuestionType questionType,
-		int timeLimitSec
+		int timeLimitSec,
+		Long answerId,
+		String answerText
 ) {
 	public static QuestionResponse from(Question question) {
 		return new QuestionResponse(
@@ -16,7 +18,9 @@ public record QuestionResponse(
 				question.getOrderNum(),
 				question.getContent(),
 				question.getQuestionType(),
-				question.getTimeLimitSec()
+				question.getTimeLimitSec(),
+				question.getAnswer() != null ? question.getAnswer().getId() : null,
+				question.getAnswer() != null ? question.getAnswer().getTranscript() : null
 		);
 	}
 }
