@@ -7,6 +7,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -17,6 +18,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.IOException;
 import java.util.Map;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
@@ -32,22 +34,27 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 			HttpServletResponse response,
 			Authentication authentication
 	) throws IOException, ServletException {
-		OAuth2User principal = (OAuth2User) authentication.getPrincipal();
-		Map<String, Object> attributes = principal.getAttributes();
+		try {
+			OAuth2User principal = (OAuth2User) authentication.getPrincipal();
+			Map<String, Object> attributes = principal.getAttributes();
 
-		Long userId = Long.valueOf(String.valueOf(attributes.get("userId")));
-		OAuthProvider provider = OAuthProvider.valueOf(String.valueOf(attributes.get("provider")));
-		String providerId = String.valueOf(attributes.get("providerId"));
+			Long userId = Long.valueOf(String.valueOf(attributes.get("userId")));
+			OAuthProvider provider = OAuthProvider.valueOf(String.valueOf(attributes.get("provider")));
+			String providerId = String.valueOf(attributes.get("providerId"));
 
-		TokenResponse tokenResponse = authService.issueTokensAndSaveRefresh(userId, provider, providerId);
+			TokenResponse tokenResponse = authService.issueTokensAndSaveRefresh(userId, provider, providerId);
 
-		String targetUrl = UriComponentsBuilder.fromUriString(redirectSuccessUrl)
-				.queryParam("accessToken", tokenResponse.accessToken())
-				.queryParam("refreshToken", tokenResponse.refreshToken())
-				.build()
-				.toUriString();
+			String targetUrl = UriComponentsBuilder.fromUriString(redirectSuccessUrl)
+					.queryParam("accessToken", tokenResponse.accessToken())
+					.queryParam("refreshToken", tokenResponse.refreshToken())
+					.build()
+					.toUriString();
 
-		getRedirectStrategy().sendRedirect(request, response, targetUrl);
+			getRedirectStrategy().sendRedirect(request, response, targetUrl);
+		} catch (Exception e) {
+			log.error("OAuth2 로그인 처리 중 에러 ", e);
+			throw e;
+		}
 	}
 }
 
