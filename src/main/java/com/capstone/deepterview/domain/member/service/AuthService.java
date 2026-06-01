@@ -30,7 +30,9 @@ public class AuthService {
 				.orElseThrow(() -> new CustomException(ErrorCode.UNAUTHORIZED, "유효하지 않은 사용자입니다."));
 
 		UserOauth userOauth = userOauthRepository.findByProviderAndProviderId(provider, providerId)
-				.orElseThrow(() -> new CustomException(ErrorCode.UNAUTHORIZED, "OAuth 계정을 찾을 수 없습니다."));
+				.orElseGet(() -> userOauthRepository.save(
+						UserOauth.of(user, provider, providerId, null, null, null)
+				));
 
 		String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
 		String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
