@@ -23,7 +23,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
 	private final AuthService authService;
 
-	@Value("${app.oauth2.redirect-success-url:http://localhost:3000/oauth2/success}")
+	@Value("${app.oauth2.redirect-success-url:http://localhost:5173/oauth2/success}")
 	private String redirectSuccessUrl;
 
 	@Override
