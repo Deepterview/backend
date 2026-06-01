@@ -6,6 +6,7 @@ import com.capstone.deepterview.domain.member.domain.UserOauth;
 import com.capstone.deepterview.domain.member.repository.UserOauthRepository;
 import com.capstone.deepterview.domain.member.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
@@ -19,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
@@ -29,37 +31,52 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 	@Override
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
-		OAuth2User oAuth2User = super.loadUser(userRequest);
-		String registrationId = userRequest.getClientRegistration().getRegistrationId();
+		try {
+			log.error("OAuth2 loadUser 진입 - provider: {}",
+					userRequest.getClientRegistration().getRegistrationId());
 
-		OAuthUserInfo userInfo = extractUserInfo(registrationId, oAuth2User.getAttributes());
-		OAuthProvider provider = OAuthProvider.valueOf(registrationId.toUpperCase());
+			OAuth2User oAuth2User = super.loadUser(userRequest);
+			log.error("OAuth2 super.loadUser 완료");
 
-		User user = userRepository.findByEmail(userInfo.email())
-				.map(existingUser -> {
-					existingUser.updateProfile(userInfo.name(), userInfo.profileImageUrl());
-					return existingUser;
-				})
-				.orElseGet(() -> userRepository.save(User.of(userInfo.email(), userInfo.name(), userInfo.profileImageUrl())));
+			String registrationId = userRequest.getClientRegistration().getRegistrationId();
 
-		userOauthRepository.findByProviderAndProviderId(provider, userInfo.providerId())
-				.orElseGet(() -> userOauthRepository.save(
-						UserOauth.of(user, provider, userInfo.providerId(), null, null, null))
-				);
+			OAuthUserInfo userInfo = extractUserInfo(registrationId, oAuth2User.getAttributes());
+			log.error("OAuth2 userInfo 추출 완료 - email: {}", userInfo.email());
 
-		Map<String, Object> attributes = new HashMap<>();
-		attributes.put("userId", user.getId());
-		attributes.put("email", user.getEmail());
-		attributes.put("name", user.getName());
-		attributes.put("profileImageUrl", user.getProfileImageUrl());
-		attributes.put("provider", provider.name());
-		attributes.put("providerId", userInfo.providerId());
+			OAuthProvider provider = OAuthProvider.valueOf(registrationId.toUpperCase());
 
-		return new DefaultOAuth2User(
-				Set.of(() -> "ROLE_USER"),
-				attributes,
-				"email"
-		);
+			User user = userRepository.findByEmail(userInfo.email())
+					.map(existingUser -> {
+						existingUser.updateProfile(userInfo.name(), userInfo.profileImageUrl());
+						return existingUser;
+					})
+					.orElseGet(() -> userRepository.save(User.of(userInfo.email(), userInfo.name(), userInfo.profileImageUrl())));
+			log.error("OAuth2 user 저장 완료 - userId: {}", user.getId());
+
+
+			userOauthRepository.findByProviderAndProviderId(provider, userInfo.providerId())
+					.orElseGet(() -> userOauthRepository.save(
+							UserOauth.of(user, provider, userInfo.providerId(), null, null, null))
+					);
+			log.error("OAuth2 userOauth 저장 완료");
+
+			Map<String, Object> attributes = new HashMap<>();
+			attributes.put("userId", user.getId());
+			attributes.put("email", user.getEmail());
+			attributes.put("name", user.getName());
+			attributes.put("profileImageUrl", user.getProfileImageUrl());
+			attributes.put("provider", provider.name());
+			attributes.put("providerId", userInfo.providerId());
+
+			return new DefaultOAuth2User(
+					Set.of(() -> "ROLE_USER"),
+					attributes,
+					"email"
+			);
+		} catch (Exception e) {
+			log.error("OAuth2 loadUser 중 에러 발생", e);
+			throw e;
+		}
 	}
 
 	@SuppressWarnings("unchecked")
