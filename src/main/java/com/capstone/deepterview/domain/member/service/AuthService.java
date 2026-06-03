@@ -11,11 +11,13 @@ import com.capstone.deepterview.global.exception.CustomException;
 import com.capstone.deepterview.global.exception.ErrorCode;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -26,17 +28,27 @@ public class AuthService {
 
 	@Transactional
 	public TokenResponse issueTokensAndSaveRefresh(Long userId, OAuthProvider provider, String providerId) {
+		log.error("issueTokensAndSaveRefresh 진입 - userId: {}, provider: {}, providerId: {}",
+				userId, provider, providerId);
+
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new CustomException(ErrorCode.UNAUTHORIZED, "유효하지 않은 사용자입니다."));
+		log.error("issueTokensAndSaveRefresh - user 조회 완료");
 
 		UserOauth userOauth = userOauthRepository.findByProviderAndProviderId(provider, providerId)
-				.orElseThrow(() -> new CustomException(ErrorCode.UNAUTHORIZED, "OAuth 계정을 찾을 수 없습니다."));
+				.orElseGet(() -> userOauthRepository.save(
+						UserOauth.of(user, provider, providerId, null, null, null)
+				));
+
+		log.error("issueTokensAndSaveRefresh - userOauth 조회 완료");
 
 		String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
 		String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 		LocalDateTime expiresAt = LocalDateTime.now().plusNanos(jwtTokenProvider.getRefreshTokenExpirationMs() * 1_000_000);
 
 		userOauth.updateTokens(accessToken, refreshToken, expiresAt);
+		log.error("issueTokensAndSaveRefresh - 토큰 저장 완료");
+
 		return new TokenResponse(accessToken, refreshToken);
 	}
 
