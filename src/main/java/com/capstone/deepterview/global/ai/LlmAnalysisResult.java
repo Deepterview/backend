@@ -1,5 +1,7 @@
 package com.capstone.deepterview.global.ai;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.List;
 
 public record LlmAnalysisResult(
@@ -20,7 +22,7 @@ public record LlmAnalysisResult(
             Float resultScore,
             String situationFeedback,
             String taskFeedback,
-            String actionFeedback,
+            @JsonProperty("actionDetail") String actionFeedback,
             String resultFeedback
     ) {}
 }

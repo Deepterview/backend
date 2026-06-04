@@ -46,7 +46,7 @@ public class LlmFeedbackService {
                     "resultScore": 0.0,
                     "situationFeedback": "상황 설명에 대한 피드백",
                     "taskFeedback": "과제/목표 설명에 대한 피드백",
-                    "actionFeedback": "구체적 행동에 대한 피드백",
+                    "actionDetail": "구체적 행동에 대한 피드백",
                     "resultFeedback": "결과 및 배운 점에 대한 피드백"
                   }
                 }
