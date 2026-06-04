@@ -14,6 +14,7 @@ import com.capstone.deepterview.domain.interview.dto.response.SessionListItemRes
 import com.capstone.deepterview.domain.interview.dto.response.SessionStatusResponse;
 import com.capstone.deepterview.domain.interview.repository.InterviewSessionRepository;
 import com.capstone.deepterview.domain.interview.repository.JobCategoryRepository;
+import com.capstone.deepterview.domain.interview.repository.QuestionPoolRepository;
 import com.capstone.deepterview.domain.interview.repository.QuestionRepository;
 import com.capstone.deepterview.domain.member.domain.User;
 import com.capstone.deepterview.domain.member.repository.UserRepository;
@@ -28,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Random;
 
 @Service
 @RequiredArgsConstructor
@@ -35,10 +37,13 @@ public class InterviewService {
 
 	private final InterviewSessionRepository interviewSessionRepository;
 	private final QuestionRepository questionRepository;
+	private final QuestionPoolRepository questionPoolRepository;
 	private final JobCategoryRepository jobCategoryRepository;
 	private final UserRepository userRepository;
 	private final AnswerRepository answerRepository;
 	private final AnswerAsyncAnalysisRunner answerAsyncAnalysisRunner;
+
+	private static final Random RANDOM = new Random();
 
 	@Transactional
 	public CreateSessionResponse createSession(Long userId, CreateSessionRequest request) {
@@ -67,14 +72,10 @@ public class InterviewService {
 		);
 		interviewSessionRepository.save(session);
 
-		List<Question> questions = createMockQuestions(session, request.totalQuestions(), request.sessionType(), normalizedCareerYears);
-		questionRepository.saveAll(questions);
+		Question firstQuestion = pickFirstQuestion(session, jobCategory.getId());
+		questionRepository.save(firstQuestion);
 
-		List<QuestionResponse> questionResponses = questions.stream()
-				.map(QuestionResponse::from)
-				.toList();
-
-		return CreateSessionResponse.of(session, questionResponses);
+		return CreateSessionResponse.of(session, List.of(QuestionResponse.from(firstQuestion)));
 	}
 
 	@Transactional(readOnly = true)
@@ -158,20 +159,13 @@ public class InterviewService {
 				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "세션을 찾을 수 없습니다."));
 	}
 
-	private List<Question> createMockQuestions(InterviewSession session, int totalQuestions, SessionType sessionType, int careerYears) {
-		return java.util.stream.IntStream.rangeClosed(1, totalQuestions)
-				.mapToObj(order -> {
-					QuestionType questionType = switch (sessionType) {
-						case TECHNICAL -> QuestionType.TECHNICAL;
-						case PERSONALITY -> QuestionType.BEHAVIORAL;
-						case COMBINED -> order % 2 == 0 ? QuestionType.BEHAVIORAL : QuestionType.TECHNICAL;
-					};
-					String careerLabel = careerYears == 0 ? "신입" : careerYears + "년차";
-					String content = String.format("[%s %s] 모의 질문 %d번입니다. 본인의 경험을 기반으로 답변해주세요.", sessionType, careerLabel, order);
-					// TODO: LLM 연동 후 직무/경력 기반 질문 생성으로 대체
-					return Question.create(session, content, questionType, order, 120);
-				})
-				.toList();
+	private Question pickFirstQuestion(InterviewSession session, Long jobCategoryId) {
+		List<QuestionPool> pool = questionPoolRepository.findByJobCategoryIdAndActiveTrue(jobCategoryId);
+		if (pool.isEmpty()) {
+			throw new CustomException(ErrorCode.NOT_FOUND, "해당 직군의 질문 풀이 비어 있습니다.");
+		}
+		QuestionPool picked = pool.get(RANDOM.nextInt(pool.size()));
+		return Question.create(session, picked.getContent(), picked.getQuestionType(), 1, 120);
 	}
 }
 
