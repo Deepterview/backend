@@ -115,7 +115,7 @@ public class InterviewService {
 			throw new CustomException(ErrorCode.VALIDATION_ERROR, "IN_PROGRESS 상태의 세션만 종료할 수 있습니다.");
 		}
 		session.complete(LocalDateTime.now());
-		return SessionStatusResponse.ended(session.getId(), session.getStatus(), session.getEndedAt());
+		return SessionStatusResponse.ended(session.getId(), session.getStatus(), session.getStartedAt(), session.getEndedAt());
 	}
 
 	@Transactional
