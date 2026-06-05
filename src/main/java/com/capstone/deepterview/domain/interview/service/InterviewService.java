@@ -5,9 +5,11 @@ import com.capstone.deepterview.domain.answer.repository.AnswerRepository;
 import com.capstone.deepterview.domain.answer.service.AnswerAsyncAnalysisRunner;
 import com.capstone.deepterview.domain.interview.domain.*;
 import com.capstone.deepterview.domain.interview.dto.request.CreateSessionRequest;
+import com.capstone.deepterview.domain.interview.dto.request.NextQuestionRequest;
 import com.capstone.deepterview.domain.interview.dto.response.CreateSessionResponse;
 import com.capstone.deepterview.domain.interview.dto.response.JobCategoryResponse;
 import com.capstone.deepterview.domain.interview.dto.response.QuestionResponse;
+import com.capstone.deepterview.global.ai.LlmFeedbackService;
 import com.capstone.deepterview.domain.interview.dto.response.SessionDetailResponse;
 import com.capstone.deepterview.domain.interview.dto.response.SessionListResponse;
 import com.capstone.deepterview.domain.interview.dto.response.SessionListItemResponse;
@@ -42,6 +44,7 @@ public class InterviewService {
 	private final UserRepository userRepository;
 	private final AnswerRepository answerRepository;
 	private final AnswerAsyncAnalysisRunner answerAsyncAnalysisRunner;
+	private final LlmFeedbackService llmFeedbackService;
 
 	private static final Random RANDOM = new Random();
 
@@ -132,6 +135,43 @@ public class InterviewService {
 				.stream()
 				.map(JobCategoryResponse::from)
 				.toList();
+	}
+
+	@Transactional
+	public QuestionResponse getNextQuestion(Long userId, Long sessionId, NextQuestionRequest request) {
+		InterviewSession session = getOwnedSession(userId, sessionId);
+
+		if (session.getStatus() != SessionStatus.IN_PROGRESS) {
+			throw new CustomException(ErrorCode.VALIDATION_ERROR, "진행 중인 세션에서만 다음 질문을 요청할 수 있습니다.");
+		}
+
+		List<Question> existing = questionRepository.findBySessionIdOrderByOrderNumAsc(sessionId);
+		int nextOrderNum = existing.size() + 1;
+
+		if (nextOrderNum > session.getTotalQuestions()) {
+			throw new CustomException(ErrorCode.VALIDATION_ERROR, "모든 질문이 완료되었습니다. 세션을 종료해주세요.");
+		}
+
+		var answer = answerRepository.findByIdWithQuestionSessionUser(request.answerId())
+				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "답변을 찾을 수 없습니다."));
+
+		if (!answer.getQuestion().getSession().getId().equals(sessionId)) {
+			throw new CustomException(ErrorCode.FORBIDDEN, "해당 세션의 답변이 아닙니다.");
+		}
+
+		String followup = llmFeedbackService.generateFollowupQuestion(
+				answer.getTranscript(),
+				answer.getQuestion().getContent()
+		);
+
+		if (followup == null || followup.isBlank()) {
+			throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR, "꼬리 질문 생성에 실패했습니다.");
+		}
+
+		Question nextQuestion = Question.create(session, followup, QuestionType.FOLLOWUP, nextOrderNum, 120);
+		questionRepository.save(nextQuestion);
+
+		return QuestionResponse.from(nextQuestion);
 	}
 
 	public void generateReport(Long userId, Long sessionId) {

@@ -71,6 +71,43 @@ public class LlmFeedbackService {
         }
     }
 
+    public String generateFollowupQuestion(String transcript, String questionText) {
+        String prompt = """
+                다음은 면접 질문과 지원자의 답변입니다.
+
+                [질문]
+                %s
+
+                [답변]
+                %s
+
+                위 답변을 바탕으로 면접관이 할 법한 꼬리 질문 1개를 생성해주세요.
+                반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트는 절대 포함하지 마세요.
+
+                {
+                  "followupQuestion": "꼬리질문"
+                }
+                """.formatted(questionText, transcript);
+
+        String response = chatClient.prompt()
+                .user(prompt)
+                .call()
+                .content();
+
+        String cleaned = response
+                .replaceAll("```json\\s*", "")
+                .replaceAll("```\\s*", "")
+                .trim();
+
+        try {
+            var node = objectMapper.readTree(cleaned);
+            var q = node.get("followupQuestion");
+            return q != null ? q.asText() : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     public LlmReportSummary generateReportSummary(InterviewSession session, List<Answer> answers) {
         StringBuilder qaSection = new StringBuilder();
         AtomicInteger index = new AtomicInteger(1);

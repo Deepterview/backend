@@ -2,6 +2,8 @@ package com.capstone.deepterview.domain.interview.controller;
 
 import com.capstone.deepterview.domain.interview.domain.SessionStatus;
 import com.capstone.deepterview.domain.interview.dto.request.CreateSessionRequest;
+import com.capstone.deepterview.domain.interview.dto.request.NextQuestionRequest;
+import com.capstone.deepterview.domain.interview.dto.response.QuestionResponse;
 import com.capstone.deepterview.domain.interview.dto.response.CreateSessionResponse;
 import com.capstone.deepterview.domain.interview.dto.response.SessionDetailResponse;
 import com.capstone.deepterview.domain.interview.dto.response.SessionListResponse;
@@ -101,6 +103,19 @@ public class InterviewController {
 	) {
 		interviewService.deleteSession(principal.getId(), sessionId);
 		return ApiResponse.successMessage("세션이 삭제되었습니다.");
+	}
+
+	@PostMapping("/{sessionId}/questions/next")
+	@Operation(
+			summary = "다음 꼬리질문 생성 API",
+			description = "이전 답변을 바탕으로 LLM이 꼬리 질문을 생성하고 저장합니다."
+	)
+	public ApiResponse<QuestionResponse> getNextQuestion(
+			@AuthenticationPrincipal UserPrincipal principal,
+			@PathVariable Long sessionId,
+			@Valid @RequestBody NextQuestionRequest request
+	) {
+		return ApiResponse.success(interviewService.getNextQuestion(principal.getId(), sessionId, request));
 	}
 
 	@PostMapping("/{sessionId}/report/generate")
