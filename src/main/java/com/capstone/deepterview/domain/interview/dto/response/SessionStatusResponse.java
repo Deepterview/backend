@@ -14,8 +14,8 @@ public record SessionStatusResponse(
 		return new SessionStatusResponse(sessionId, status, startedAt, null);
 	}
 
-	public static SessionStatusResponse ended(Long sessionId, SessionStatus status, LocalDateTime endedAt) {
-		return new SessionStatusResponse(sessionId, status, null, endedAt);
+	public static SessionStatusResponse ended(Long sessionId, SessionStatus status, LocalDateTime startedAt, LocalDateTime endedAt) {
+		return new SessionStatusResponse(sessionId, status, startedAt, endedAt);
 	}
 }
 
