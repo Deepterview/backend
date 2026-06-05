@@ -58,6 +58,10 @@ public class LlmFeedbackService {
                 .call()
                 .content();
 
+        if (response == null || response.isBlank()) {
+            return new LlmAnalysisResult(null, null);
+        }
+
         String cleaned = response
                 .replaceAll("```json\\s*", "")
                 .replaceAll("```\\s*", "")
@@ -93,6 +97,10 @@ public class LlmFeedbackService {
                 .user(prompt)
                 .call()
                 .content();
+
+        if (response == null || response.isBlank()) {
+            return null;
+        }
 
         String cleaned = response
                 .replaceAll("```json\\s*", "")
@@ -159,6 +167,10 @@ public class LlmFeedbackService {
                 .user(prompt)
                 .call()
                 .content();
+
+        if (response == null || response.isBlank()) {
+            return new LlmReportSummary(null, null, null, null);
+        }
 
         String cleaned = response
                 .replaceAll("```json\\s*", "")
