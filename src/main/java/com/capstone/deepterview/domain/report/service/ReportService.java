@@ -34,16 +34,6 @@ public class ReportService {
     private final AnswerRepository answerRepository;
     private final LlmFeedbackService llmFeedbackService;
 
-    public SessionReportResponse getReport(Long userId, Long sessionId) {
-        InterviewSession session = getOwnedSession(userId, sessionId);
-        if (session.getStatus() != SessionStatus.COMPLETED) {
-            throw new CustomException(ErrorCode.VALIDATION_ERROR, "세션이 완료되지 않아 리포트를 조회할 수 없습니다.");
-        }
-        return feedbackReportRepository.findBySession_Id(sessionId)
-                .map(SessionReportResponse::of)
-                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "종합 리포트가 아직 생성되지 않았습니다."));
-    }
-
     @Transactional
     public SessionReportResponse generateOrGetReport(Long userId, Long sessionId) {
         InterviewSession session = getOwnedSession(userId, sessionId);

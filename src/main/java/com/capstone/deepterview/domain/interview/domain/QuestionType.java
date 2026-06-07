@@ -4,6 +4,7 @@ public enum QuestionType {
 	TECHNICAL,
 	BEHAVIORAL,
 	SITUATIONAL,
-	EXPERIENCE
+	EXPERIENCE,
+	FOLLOWUP
 }
 

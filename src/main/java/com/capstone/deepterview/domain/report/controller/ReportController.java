@@ -18,14 +18,6 @@ public class ReportController {
 
     private final ReportService reportService;
 
-    @GetMapping("/{sessionId}/report")
-    public ApiResponse<SessionReportResponse> getReport(
-            @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable Long sessionId
-    ) {
-        return ApiResponse.success(reportService.getReport(principal.getId(), sessionId));
-    }
-
     @PostMapping("/{sessionId}/report")
     @Operation(
             summary = "피드백 리포트 생성",
