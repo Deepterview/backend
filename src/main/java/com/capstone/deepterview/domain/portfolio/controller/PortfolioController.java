@@ -2,6 +2,7 @@ package com.capstone.deepterview.domain.portfolio.controller;
 
 import com.capstone.deepterview.domain.member.dto.response.UserPrincipal;
 import com.capstone.deepterview.domain.portfolio.dto.response.PortfolioExtractResponse;
+import com.capstone.deepterview.domain.portfolio.dto.response.PortfolioQuestionsResponse;
 import com.capstone.deepterview.domain.portfolio.dto.response.PortfolioUploadResponse;
 import com.capstone.deepterview.domain.portfolio.service.PortfolioService;
 import com.capstone.deepterview.global.common.ApiResponse;
@@ -43,5 +44,17 @@ public class PortfolioController {
             @PathVariable Long portfolioId
     ) {
         return ApiResponse.success(portfolioService.extractPortfolio(principal.getId(), portfolioId));
+    }
+
+    @PostMapping("/{portfolioId}/questions")
+    @Operation(
+            summary = "포트폴리오 기반 면접 질문 생성 API",
+            description = "추출된 포트폴리오 텍스트를 바탕으로 LLM이 맞춤 면접 질문을 생성하여 반환합니다."
+    )
+    public ApiResponse<PortfolioQuestionsResponse> generateQuestions(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long portfolioId
+    ) {
+        return ApiResponse.success(portfolioService.generateQuestions(principal.getId(), portfolioId));
     }
 }

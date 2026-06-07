@@ -4,9 +4,11 @@ import com.capstone.deepterview.domain.member.domain.User;
 import com.capstone.deepterview.domain.member.repository.UserRepository;
 import com.capstone.deepterview.domain.portfolio.domain.Portfolio;
 import com.capstone.deepterview.domain.portfolio.dto.response.PortfolioExtractResponse;
+import com.capstone.deepterview.domain.portfolio.dto.response.PortfolioQuestionsResponse;
 import com.capstone.deepterview.domain.portfolio.dto.response.PortfolioUploadResponse;
 import com.capstone.deepterview.domain.portfolio.dto.response.PythonExtractResumeResponse;
 import com.capstone.deepterview.domain.portfolio.repository.PortfolioRepository;
+import com.capstone.deepterview.global.ai.LlmFeedbackService;
 import com.capstone.deepterview.global.exception.BusinessException;
 import com.capstone.deepterview.global.exception.CustomException;
 import com.capstone.deepterview.global.exception.ErrorCode;
@@ -20,6 +22,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -30,6 +33,7 @@ public class PortfolioService {
     private final UserRepository userRepository;
     private final PortfolioRepository portfolioRepository;
     private final PortfolioPythonClient portfolioPythonClient;
+    private final LlmFeedbackService llmFeedbackService;
 
     @Value("${app.file.portfolio-storage-dir}")
     private String portfolioStorageDir;
@@ -71,6 +75,28 @@ public class PortfolioService {
         portfolio.updateExtractedText(result.text(), result.isScanned());
 
         return new PortfolioExtractResponse(portfolio.getId(), portfolio.getExtractedText(), portfolio.getIsScanned());
+    }
+
+    @Transactional(readOnly = true)
+    public PortfolioQuestionsResponse generateQuestions(Long userId, Long portfolioId) {
+        Portfolio portfolio = portfolioRepository.findById(portfolioId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "포트폴리오를 찾을 수 없습니다."));
+
+        if (!portfolio.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN, "해당 포트폴리오에 접근할 권한이 없습니다.");
+        }
+
+        if (portfolio.getExtractedText() == null || portfolio.getExtractedText().isBlank()) {
+            throw new CustomException(ErrorCode.VALIDATION_ERROR, "텍스트가 추출되지 않은 포트폴리오입니다. 먼저 텍스트를 추출해주세요.");
+        }
+
+        List<String> questions = llmFeedbackService.generatePortfolioQuestions(portfolio.getExtractedText());
+
+        if (questions.isEmpty()) {
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR, "면접 질문 생성에 실패했습니다.");
+        }
+
+        return new PortfolioQuestionsResponse(portfolio.getId(), questions);
     }
 
     private String storePortfolioFile(MultipartFile file) {
