@@ -1,0 +1,111 @@
+package com.capstone.deepterview.domain.portfolio.service;
+
+import com.capstone.deepterview.domain.member.domain.User;
+import com.capstone.deepterview.domain.member.repository.UserRepository;
+import com.capstone.deepterview.domain.portfolio.domain.Portfolio;
+import com.capstone.deepterview.domain.portfolio.dto.response.PortfolioExtractResponse;
+import com.capstone.deepterview.domain.portfolio.dto.response.PortfolioUploadResponse;
+import com.capstone.deepterview.domain.portfolio.dto.response.PythonExtractResumeResponse;
+import com.capstone.deepterview.domain.portfolio.repository.PortfolioRepository;
+import com.capstone.deepterview.global.exception.BusinessException;
+import com.capstone.deepterview.global.exception.CustomException;
+import com.capstone.deepterview.global.exception.ErrorCode;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Optional;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+public class PortfolioService {
+
+    private final UserRepository userRepository;
+    private final PortfolioRepository portfolioRepository;
+    private final PortfolioPythonClient portfolioPythonClient;
+
+    @Value("${app.file.portfolio-storage-dir}")
+    private String portfolioStorageDir;
+
+    @Transactional
+    public PortfolioUploadResponse uploadPortfolio(Long userId, MultipartFile file) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+
+        if (file == null || file.isEmpty()) {
+            throw new CustomException(ErrorCode.VALIDATION_ERROR, "포트폴리오 파일은 필수입니다.");
+        }
+
+        String storedPath = storePortfolioFile(file);
+        Portfolio portfolio = portfolioRepository.save(Portfolio.create(user, storedPath));
+
+        return new PortfolioUploadResponse(portfolio.getId(), portfolio.getFilePath());
+    }
+
+    @Transactional
+    public PortfolioExtractResponse extractPortfolio(Long userId, Long portfolioId) {
+        Portfolio portfolio = portfolioRepository.findById(portfolioId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "포트폴리오를 찾을 수 없습니다."));
+
+        if (!portfolio.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN, "해당 포트폴리오에 접근할 권한이 없습니다.");
+        }
+
+        String absolutePath = Paths.get(System.getProperty("user.dir"))
+                .resolve(portfolio.getFilePath())
+                .toAbsolutePath().normalize().toString().replace('\\', '/');
+
+        PythonExtractResumeResponse result = portfolioPythonClient.extractResume(absolutePath);
+
+        if (result.isScanned()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "텍스트 추출이 불가능한 스캔 PDF입니다.");
+        }
+
+        portfolio.updateExtractedText(result.text(), result.isScanned());
+
+        return new PortfolioExtractResponse(portfolio.getId(), portfolio.getExtractedText(), portfolio.getIsScanned());
+    }
+
+    private String storePortfolioFile(MultipartFile file) {
+        try {
+            Path projectRoot = Paths.get(System.getProperty("user.dir")).normalize();
+            Path dir = Paths.get(portfolioStorageDir);
+            if (!dir.isAbsolute()) {
+                dir = projectRoot.resolve(dir);
+            }
+            dir = dir.normalize();
+            Files.createDirectories(dir);
+
+            String original = Optional.ofNullable(file.getOriginalFilename()).orElse("portfolio");
+            String ext = extractExtension(original);
+            String filename = UUID.randomUUID() + ext;
+
+            Path target = dir.resolve(filename);
+            file.transferTo(target);
+
+            Path absoluteFile = target.toAbsolutePath().normalize();
+            try {
+                return projectRoot.relativize(absoluteFile).toString().replace('\\', '/');
+            } catch (IllegalArgumentException ex) {
+                return absoluteFile.toString().replace('\\', '/');
+            }
+        } catch (IOException e) {
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR, "포트폴리오 파일 저장에 실패했습니다.");
+        }
+    }
+
+    private static String extractExtension(String filename) {
+        int dot = filename.lastIndexOf('.');
+        if (dot < 0 || dot == filename.length() - 1) {
+            return "";
+        }
+        return filename.substring(dot);
+    }
+}
