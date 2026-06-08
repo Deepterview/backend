@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -113,6 +114,49 @@ public class LlmFeedbackService {
             return q != null ? q.asText() : null;
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    public List<String> generatePortfolioQuestions(String portfolioText) {
+        String prompt = """
+                다음은 지원자의 포트폴리오에서 추출한 내용입니다.
+
+                [포트폴리오 내용]
+                %s
+
+                위 포트폴리오 내용을 바탕으로 면접관이 할 법한 면접 질문을 5개 생성해주세요.
+                반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트는 절대 포함하지 마세요.
+
+                {
+                  "questions": ["질문1", "질문2", "질문3", "질문4", "질문5"]
+                }
+                """.formatted(portfolioText);
+
+        String response = chatClient.prompt()
+                .user(prompt)
+                .call()
+                .content();
+
+        if (response == null || response.isBlank()) {
+            return List.of();
+        }
+
+        String cleaned = response
+                .replaceAll("```json\\s*", "")
+                .replaceAll("```\\s*", "")
+                .trim();
+
+        try {
+            var node = objectMapper.readTree(cleaned);
+            var questionsNode = node.get("questions");
+            if (questionsNode == null || !questionsNode.isArray()) {
+                return List.of();
+            }
+            List<String> questions = new ArrayList<>();
+            questionsNode.forEach(q -> questions.add(q.asText()));
+            return questions;
+        } catch (Exception e) {
+            return List.of();
         }
     }
 
