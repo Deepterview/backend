@@ -34,6 +34,6 @@ body:
     id: related
     attributes:
       label: 관련 이슈 / PR
-      description: 연관된 이슈나 PR 번호가 있다면 작성해주세요. (예: #12)
+      description: "연관된 이슈나 PR 번호가 있다면 작성해주세요. (예: #12)"
     validations:
       required: false
