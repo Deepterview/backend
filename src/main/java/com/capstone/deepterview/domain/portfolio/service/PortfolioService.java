@@ -6,10 +6,8 @@ import com.capstone.deepterview.domain.portfolio.domain.Portfolio;
 import com.capstone.deepterview.domain.portfolio.dto.response.PortfolioExtractResponse;
 import com.capstone.deepterview.domain.portfolio.dto.response.PortfolioQuestionsResponse;
 import com.capstone.deepterview.domain.portfolio.dto.response.PortfolioUploadResponse;
-import com.capstone.deepterview.domain.portfolio.dto.response.PythonExtractResumeResponse;
 import com.capstone.deepterview.domain.portfolio.repository.PortfolioRepository;
 import com.capstone.deepterview.global.ai.LlmFeedbackService;
-import com.capstone.deepterview.global.exception.BusinessException;
 import com.capstone.deepterview.global.exception.CustomException;
 import com.capstone.deepterview.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +30,6 @@ public class PortfolioService {
 
     private final UserRepository userRepository;
     private final PortfolioRepository portfolioRepository;
-    private final PortfolioPythonClient portfolioPythonClient;
     private final LlmFeedbackService llmFeedbackService;
 
     @Value("${app.file.portfolio-storage-dir}")
@@ -62,19 +59,7 @@ public class PortfolioService {
             throw new CustomException(ErrorCode.FORBIDDEN, "해당 포트폴리오에 접근할 권한이 없습니다.");
         }
 
-        String absolutePath = Paths.get(System.getProperty("user.dir"))
-                .resolve(portfolio.getFilePath())
-                .toAbsolutePath().normalize().toString().replace('\\', '/');
-
-        PythonExtractResumeResponse result = portfolioPythonClient.extractResume(absolutePath);
-
-        if (result.isScanned()) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "텍스트 추출이 불가능한 스캔 PDF입니다.");
-        }
-
-        portfolio.updateExtractedText(result.text(), result.isScanned());
-
-        return new PortfolioExtractResponse(portfolio.getId(), portfolio.getExtractedText(), portfolio.getIsScanned());
+        throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR, "포트폴리오 텍스트 추출 기능은 현재 준비 중입니다.");
     }
 
     @Transactional(readOnly = true)
