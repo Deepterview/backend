@@ -117,18 +117,5 @@ public class InterviewController {
 	) {
 		return ApiResponse.success(interviewService.getNextQuestion(principal.getId(), sessionId, request));
 	}
-
-	@PostMapping("/{sessionId}/report/generate")
-	@Operation(
-			summary = "저장된 영상 Python 서버로 전송 API",
-			description = "저장된 영상을 Python 서버로 전송하여 정밀 분석시키는 트리거 API입니다."
-	)
-	public ApiResponse<Void> generateReport(
-			@AuthenticationPrincipal UserPrincipal principal,
-			@PathVariable Long sessionId
-	) {
-		interviewService.generateReport(principal.getId(), sessionId);
-		return ApiResponse.successMessage("정밀 분석이 시작되었습니다.");
-	}
 }
 
