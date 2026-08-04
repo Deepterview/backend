@@ -1,8 +1,6 @@
 package com.capstone.deepterview.domain.interview.service;
 
-import com.capstone.deepterview.domain.answer.domain.Answer;
 import com.capstone.deepterview.domain.answer.repository.AnswerRepository;
-import com.capstone.deepterview.domain.answer.service.AnswerAsyncAnalysisRunner;
 import com.capstone.deepterview.domain.interview.domain.*;
 import com.capstone.deepterview.domain.interview.dto.request.CreateSessionRequest;
 import com.capstone.deepterview.domain.interview.dto.request.NextQuestionRequest;
@@ -28,7 +26,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
@@ -43,7 +40,6 @@ public class InterviewService {
 	private final JobCategoryRepository jobCategoryRepository;
 	private final UserRepository userRepository;
 	private final AnswerRepository answerRepository;
-	private final AnswerAsyncAnalysisRunner answerAsyncAnalysisRunner;
 	private final LlmFeedbackService llmFeedbackService;
 
 	private static final Random RANDOM = new Random();
@@ -172,26 +168,6 @@ public class InterviewService {
 		questionRepository.save(nextQuestion);
 
 		return QuestionResponse.from(nextQuestion);
-	}
-
-	public void generateReport(Long userId, Long sessionId) {
-		InterviewSession session = getOwnedSession(userId, sessionId);
-		if (session.getStatus() != SessionStatus.COMPLETED) {
-			throw new CustomException(ErrorCode.VALIDATION_ERROR, "완료된 세션만 리포트를 생성할 수 있습니다.");
-		}
-
-		List<Answer> answersWithVideo = answerRepository.findBySessionIdWithVideoPath(sessionId);
-
-		if (answersWithVideo.isEmpty()) {
-			throw new CustomException(ErrorCode.VALIDATION_ERROR, "업로드된 영상이 없어 정밀 분석을 시작할 수 없습니다.");
-		}
-
-		answersWithVideo.forEach(answer -> {
-			String absolutePath = Paths.get(System.getProperty("user.dir"))
-					.resolve(answer.getAudioFilePath())
-					.toAbsolutePath().normalize().toString().replace('\\', '/');
-			answerAsyncAnalysisRunner.runVideoAnalysis(answer.getId(), absolutePath);
-		});
 	}
 
 	private InterviewSession getOwnedSession(Long userId, Long sessionId) {
