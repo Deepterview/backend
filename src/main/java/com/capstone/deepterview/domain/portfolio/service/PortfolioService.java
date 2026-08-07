@@ -11,6 +11,9 @@ import com.capstone.deepterview.global.ai.LlmFeedbackService;
 import com.capstone.deepterview.global.exception.CustomException;
 import com.capstone.deepterview.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -59,7 +62,35 @@ public class PortfolioService {
             throw new CustomException(ErrorCode.FORBIDDEN, "해당 포트폴리오에 접근할 권한이 없습니다.");
         }
 
-        throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR, "포트폴리오 텍스트 추출 기능은 현재 준비 중입니다.");
+        String text = extractText(portfolio.getFilePath());
+        boolean isScanned = text.isBlank();
+
+        if (isScanned) {
+            throw new CustomException(ErrorCode.VALIDATION_ERROR, "텍스트를 추출할 수 없는 스캔본 PDF입니다.");
+        }
+
+        portfolio.updateExtractedText(text, false);
+
+        return new PortfolioExtractResponse(portfolio.getId(), text, false);
+    }
+
+    private String extractText(String relativeFilePath) {
+        Path projectRoot = Paths.get(System.getProperty("user.dir")).normalize();
+        Path file = Paths.get(relativeFilePath);
+        if (!file.isAbsolute()) {
+            file = projectRoot.resolve(file);
+        }
+        file = file.normalize();
+
+        if (!Files.exists(file)) {
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR, "포트폴리오 파일을 찾을 수 없습니다.");
+        }
+
+        try (PDDocument document = Loader.loadPDF(file.toFile())) {
+            return new PDFTextStripper().getText(document).trim();
+        } catch (IOException e) {
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR, "포트폴리오 파일을 읽을 수 없습니다.");
+        }
     }
 
     @Transactional(readOnly = true)
