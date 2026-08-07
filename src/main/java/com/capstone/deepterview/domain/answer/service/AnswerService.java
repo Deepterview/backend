@@ -12,10 +12,13 @@ import com.capstone.deepterview.global.exception.CustomException;
 import com.capstone.deepterview.global.exception.ErrorCode;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -37,9 +40,17 @@ public class AnswerService {
 	private final LlmFeedbackRepository llmFeedbackRepository;
 	private final ObjectMapper objectMapper;
 	private final LlmFeedbackService llmFeedbackService;
+	private final PlatformTransactionManager transactionManager;
 
 	@Value("${app.file.answer-storage-dir}")
 	private String answerStorageDir;
+
+	private TransactionTemplate transactionTemplate;
+
+	@PostConstruct
+	void init() {
+		this.transactionTemplate = new TransactionTemplate(transactionManager);
+	}
 
 	@Transactional
 	public SubmitAnswerResponse submitAnswer(Long userId, SubmitAnswerRequest request) {
@@ -84,7 +95,6 @@ public class AnswerService {
 		answer.updateAudio(storedPath, answer.getDurationSec());
 	}
 
-	@Transactional
 	public AnswerAnalysisResponse getAnalysis(Long userId, Long answerId) {
 		Answer answer = answerRepository.findByIdWithQuestionSessionUser(answerId)
 				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "답변을 찾을 수 없습니다."));
@@ -111,11 +121,30 @@ public class AnswerService {
 			llm = toLlmView(existingLlm.get());
 			star = existingStar.map(this::toStarView).orElse(null);
 		} else {
+			// DB 커넥션을 점유하지 않은 상태로 Claude 호출 (네트워크 왕복, 도구 호출 시 더 길어질 수 있음)
 			LlmAnalysisResult result = llmFeedbackService.generateAnalysis(
 					answer.getTranscript(),
 					answer.getQuestion().getContent()
 			);
 
+			AnalysisPersistResult persisted = persistAnalysisResult(answer, result);
+			llm = persisted.llm();
+			star = persisted.star();
+		}
+
+		return new AnswerAnalysisResponse(
+				answer.getId(),
+				answer.getTranscript(),
+				answer.getDurationSec(),
+				speech,
+				star,
+				nonverbal,
+				llm
+		);
+	}
+
+	private AnalysisPersistResult persistAnalysisResult(Answer answer, LlmAnalysisResult result) {
+		return transactionTemplate.execute(status -> {
 			LlmAnalysisResult.FeedbackPart fp = result.feedback();
 			List<String> followups = (fp != null && fp.followupQuestions() != null) ? fp.followupQuestions() : List.of();
 			LlmFeedback savedLlm = llmFeedbackRepository.save(LlmFeedback.create(
@@ -128,8 +157,9 @@ public class AnswerService {
 					followups.size() > 2 ? followups.get(2) : null,
 					null, null, null, null, null
 			));
-			llm = toLlmView(savedLlm);
+			LlmFeedbackView llmView = toLlmView(savedLlm);
 
+			StarAnalysisView starView = null;
 			if (result.star() != null) {
 				LlmAnalysisResult.StarPart sp = result.star();
 				StarAnalysis savedStar = starAnalysisRepository.save(StarAnalysis.create(
@@ -144,21 +174,14 @@ public class AnswerService {
 						sp.actionFeedback(),
 						sp.resultFeedback()
 				));
-				star = toStarView(savedStar);
-			} else {
-				star = null;
+				starView = toStarView(savedStar);
 			}
-		}
 
-		return new AnswerAnalysisResponse(
-				answer.getId(),
-				answer.getTranscript(),
-				answer.getDurationSec(),
-				speech,
-				star,
-				nonverbal,
-				llm
-		);
+			return new AnalysisPersistResult(llmView, starView);
+		});
+	}
+
+	private record AnalysisPersistResult(LlmFeedbackView llm, StarAnalysisView star) {
 	}
 
 	private float calculateStarTotalScore(LlmAnalysisResult.StarPart sp) {
