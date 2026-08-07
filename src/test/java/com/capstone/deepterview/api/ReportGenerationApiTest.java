@@ -106,7 +106,7 @@ class ReportGenerationApiTest {
                 .andExpect(jsonPath("$.data.grade").value("B"))           // 77.5점 → B
                 .andExpect(jsonPath("$.data.overallScore").value(closeTo(77.5, 0.5)))
                 .andExpect(jsonPath("$.data.contentScore").value(closeTo(77.5, 0.5)))
-                .andExpect(jsonPath("$.data.speechScore").isEmpty())       // Python 콜백 없음
+                .andExpect(jsonPath("$.data.speechScore").isEmpty())       // 답변에 분석 데이터 없음
                 .andExpect(jsonPath("$.data.nonverbalScore").isEmpty())
                 .andExpect(jsonPath("$.data.strengthSummary").value("전반적으로 구조화된 답변을 제공했습니다."))
                 .andExpect(jsonPath("$.data.weaknessSummary").value("구체적 수치 제시가 부족합니다."))
@@ -114,7 +114,7 @@ class ReportGenerationApiTest {
                 .andExpect(jsonPath("$.data.aiSummary").value("전반적으로 안정적인 면접이었습니다."));
     }
 
-    // ── 테스트 2: 분석 없이 생성 (Python 미호출) ───────────────────────────────
+    // ── 테스트 2: 분석 없이 생성 (speech/nonverbal 분석 데이터 미제공) ───────────
 
     @Test
     @DisplayName("POST /report: 분석 데이터 없이도 리포트 생성 → 점수 null, 텍스트 요약은 정상 반환")
