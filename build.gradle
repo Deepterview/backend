@@ -31,6 +31,9 @@ dependencies {
 	// Spring AI - Anthropic
 	implementation 'org.springframework.ai:spring-ai-starter-model-anthropic'
 
+	// PDF 텍스트 추출 (포트폴리오)
+	implementation 'org.apache.pdfbox:pdfbox:3.0.3'
+
 	// QueryDSL (Jakarta)
 	implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
 	annotationProcessor 'com.querydsl:querydsl-apt:5.0.0:jakarta'
