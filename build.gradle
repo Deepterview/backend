@@ -31,6 +31,10 @@ dependencies {
 	// Spring AI - Anthropic
 	implementation 'org.springframework.ai:spring-ai-starter-model-anthropic'
 
+	// Monitoring (Actuator + Prometheus)
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'io.micrometer:micrometer-registry-prometheus'
+
 	// PDF 텍스트 추출 (포트폴리오)
 	implementation 'org.apache.pdfbox:pdfbox:3.0.3'
 
