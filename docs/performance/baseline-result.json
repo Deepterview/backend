@@ -1,0 +1,233 @@
+{
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {
+            "setup": {
+                "groups": {},
+                "checks": {
+                        "job-categories 200": {
+                            "name": "job-categories 200",
+                            "path": "::setup::job-categories 200",
+                            "id": "555343448290c903b390c4683baf1584",
+                            "passes": 1,
+                            "fails": 0
+                        }
+                    },
+                "name": "setup",
+                "path": "::setup",
+                "id": "5c0f8025f7e0b6654089e5b00e950f1a"
+            },
+            "llm_followup": {
+                "checks": {
+                    "꼬리질문 생성 200": {
+                        "path": "::llm_followup::꼬리질문 생성 200",
+                        "id": "c27aef77894c28251264eca6111bb312",
+                        "passes": 79,
+                        "fails": 0,
+                        "name": "꼬리질문 생성 200"
+                    }
+                },
+                "name": "llm_followup",
+                "path": "::llm_followup",
+                "id": "f5639712e315da7454e240e178582b06",
+                "groups": {}
+            },
+            "llm_report": {
+                "groups": {},
+                "checks": {
+                        "리포트 생성 200": {
+                            "path": "::llm_report::리포트 생성 200",
+                            "id": "7cf2b9fc4a1c7ab5b1445b52f20f4d62",
+                            "passes": 79,
+                            "fails": 0,
+                            "name": "리포트 생성 200"
+                        }
+                    },
+                "name": "llm_report",
+                "path": "::llm_report",
+                "id": "0aa89a5a1963260f8198d96c6b2a7649"
+            }
+        },
+        "checks": {
+            "대조군(job-categories) 200": {
+                "name": "대조군(job-categories) 200",
+                "path": "::대조군(job-categories) 200",
+                "id": "0f7b77b43b073b1163556823a568cfa8",
+                "passes": 89,
+                "fails": 0
+            },
+            "test-login 200": {
+                "id": "7ea35ca130d56b7ce52e6ae3daea8fa2",
+                "passes": 79,
+                "fails": 0,
+                "name": "test-login 200",
+                "path": "::test-login 200"
+            },
+            "세션 생성 200": {
+                "passes": 79,
+                "fails": 0,
+                "name": "세션 생성 200",
+                "path": "::세션 생성 200",
+                "id": "a8cc293ed0aa42a6a505b3617380237e"
+            },
+            "답변 제출 200": {
+                "id": "2de29b7e72b3af19975b4e42cc9788b4",
+                "passes": 79,
+                "fails": 0,
+                "name": "답변 제출 200",
+                "path": "::답변 제출 200"
+            }
+        }
+    },
+    "metrics": {
+        "checks": {
+            "passes": 485,
+            "fails": 0,
+            "value": 1
+        },
+        "http_req_duration{expected_response:true}": {
+            "avg": 846.1304650077764,
+            "min": 5.9448,
+            "med": 36.8486,
+            "max": 5454.41,
+            "p(90)": 3804.50984,
+            "p(95)": 4265.787829999999
+        },
+        "iterations": {
+            "count": 168,
+            "rate": 3.2780530083766606
+        },
+        "dropped_iterations": {
+            "count": 2,
+            "rate": 0.039024440575912624
+        },
+        "http_req_duration": {
+            "max": 5454.41,
+            "p(90)": 3804.50984,
+            "p(95)": 4265.787829999999,
+            "avg": 846.1304650077764,
+            "min": 5.9448,
+            "med": 36.8486
+        },
+        "data_sent": {
+            "count": 224294,
+            "rate": 4376.473937266873
+        },
+        "http_reqs": {
+            "count": 643,
+            "rate": 12.546357645155908
+        },
+        "http_req_waiting": {
+            "avg": 845.2335908242607,
+            "min": 5.3193,
+            "med": 36.6178,
+            "max": 5454.41,
+            "p(90)": 3803.6517400000002,
+            "p(95)": 4265.135109999999
+        },
+        "http_req_sending": {
+            "med": 0,
+            "max": 2.3226,
+            "p(90)": 0,
+            "p(95)": 0.51119,
+            "avg": 0.050884758942457226,
+            "min": 0
+        },
+        "vus": {
+            "min": 2,
+            "max": 15,
+            "value": 2
+        },
+        "http_req_connecting": {
+            "min": 0,
+            "med": 0,
+            "max": 2.2045,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0.029005909797822707
+        },
+        "http_req_tls_handshaking": {
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0
+        },
+        "http_req_blocked": {
+            "p(95)": 0,
+            "avg": 0.09576438569206848,
+            "min": 0,
+            "med": 0,
+            "max": 34.1993,
+            "p(90)": 0
+        },
+        "control_endpoint_duration": {
+            "min": 5.9448,
+            "med": 214.588,
+            "max": 3491.7318,
+            "p(90)": 1578.3445000000004,
+            "p(95)": 2114.115979999999,
+            "avg": 551.4527213483144
+        },
+        "http_req_receiving": {
+            "med": 0.6944,
+            "max": 8.5832,
+            "p(90)": 1.5998600000000023,
+            "p(95)": 2.090609999999999,
+            "avg": 0.8459894245723172,
+            "min": 0
+        },
+        "iteration_duration": {
+            "med": 2094.4846000000002,
+            "max": 9072.6688,
+            "p(90)": 6567.87333,
+            "p(95)": 7488.558675,
+            "avg": 3239.664805952379,
+            "min": 5.9448
+        },
+        "vus_max": {
+            "value": 15,
+            "min": 15,
+            "max": 15
+        },
+        "data_received": {
+            "rate": 10571.272170948107,
+            "count": 541777
+        },
+        "llm_report_duration": {
+            "max": 5454.41,
+            "p(90)": 4574.4245,
+            "p(95)": 4806.76179,
+            "avg": 4163.632944303796,
+            "min": 3347.0381,
+            "med": 4202.2408
+        },
+        "llm_followup_duration": {
+            "p(90)": 2212.7835800000003,
+            "p(95)": 2539.10339,
+            "avg": 1827.976982278481,
+            "min": 1375.209,
+            "med": 1736.9519,
+            "max": 2719.5361
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 643,
+            "value": 0
+        },
+        "group_duration": {
+            "max": 5454.41,
+            "p(90)": 4455.318749999999,
+            "p(95)": 4573.3190349999995,
+            "avg": 2996.2580069620235,
+            "min": 1375.209,
+            "med": 3033.5424999999996
+        }
+    },
+    "setup_data": {
+        "jobCategoryId": 1
+    }
+}
