@@ -71,8 +71,8 @@ public class InterviewTools {
         return result.toString();
     }
 
-    // Tavily 서킷 오픈/재시도 소진 시 폴백. 이 메서드는 Claude의 tool-call 루프 안에서
-    // 실행되므로 예외를 던지면 전체 응답이 실패한다 — 검색 없이 계속 답변하도록 문자열을 반환한다.
+    // Tavily 서킷 오픈/재시도 소진 시 fallback
+    // 검색 없이 계속 답변하도록 문자열을 반환
     private String searchTechDocsFallback(String keyword, Throwable t) {
         log.warn("Tavily 검색 실패, 폴백 응답 반환. keyword: {}", keyword, t);
         return "기술 키워드 검색을 사용할 수 없습니다. 일반적인 지식을 바탕으로 답변해주세요.";
