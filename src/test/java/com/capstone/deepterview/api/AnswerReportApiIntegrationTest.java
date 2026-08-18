@@ -63,7 +63,7 @@ class AnswerReportApiIntegrationTest {
 		String email = "answer-dup-" + UUID.randomUUID() + "@example.com";
 		String accessToken = loginAndGetAccessToken(email);
 
-		JobCategory category = jobCategoryRepository.save(JobCategory.of("중복테스트 직군", "desc"));
+		JobCategory category = seededCategory();
 		Long sessionId = createSession(accessToken, category.getId(), 1);
 		Long questionId = getFirstQuestionId(accessToken, sessionId);
 
@@ -97,7 +97,7 @@ class AnswerReportApiIntegrationTest {
 		String email = "report-ok-" + UUID.randomUUID() + "@example.com";
 		String accessToken = loginAndGetAccessToken(email);
 
-		JobCategory category = jobCategoryRepository.save(JobCategory.of("리포트테스트 직군", "desc"));
+		JobCategory category = seededCategory();
 		Long sessionId = createSession(accessToken, category.getId(), 1);
 
 		mockMvc.perform(patch("/api/v1/sessions/{sessionId}/start", sessionId)
@@ -137,7 +137,7 @@ class AnswerReportApiIntegrationTest {
 		String email = "report-bad-" + UUID.randomUUID() + "@example.com";
 		String accessToken = loginAndGetAccessToken(email);
 
-		JobCategory category = jobCategoryRepository.save(JobCategory.of("리포트실패 직군", "desc"));
+		JobCategory category = seededCategory();
 		Long sessionId = createSession(accessToken, category.getId(), 1);
 
 		mockMvc.perform(get("/api/v1/sessions/{sessionId}/report", sessionId)
@@ -153,7 +153,7 @@ class AnswerReportApiIntegrationTest {
 		String email = "report-missing-" + UUID.randomUUID() + "@example.com";
 		String accessToken = loginAndGetAccessToken(email);
 
-		JobCategory category = jobCategoryRepository.save(JobCategory.of("리포트없음 직군", "desc"));
+		JobCategory category = seededCategory();
 		Long sessionId = createSession(accessToken, category.getId(), 1);
 
 		mockMvc.perform(patch("/api/v1/sessions/{sessionId}/start", sessionId)
@@ -169,6 +169,13 @@ class AnswerReportApiIntegrationTest {
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.success").value(false))
 				.andExpect(jsonPath("$.code").value("NOT_FOUND"));
+	}
+
+	// DataInitializer가 시드하는 QuestionPool을 가진 카테고리를 재사용 — 새로 만든 카테고리는
+	// QuestionPool이 비어 있어 세션 생성이 실패한다.
+	private JobCategory seededCategory() {
+		return jobCategoryRepository.findByName("백엔드 개발")
+				.orElseThrow(() -> new IllegalStateException("DataInitializer 시드 카테고리를 찾을 수 없습니다."));
 	}
 
 	private String loginAndGetAccessToken(String email) throws Exception {
