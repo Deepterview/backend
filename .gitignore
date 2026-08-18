@@ -6,7 +6,8 @@ application-test.yml
 application-secret.yml
 CLAUDE.md
 .cursor/
-docs/
+docs/*
+!docs/performance/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
