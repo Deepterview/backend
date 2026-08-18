@@ -120,6 +120,41 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "id": 9,
+      "title": "LLM call latency by operation (p50/p95)",
+      "type": "timeseries",
+      "description": "Claude 호출 자체의 지연시간(HTTP 전체 응답시간과 분리). operation = generateAnalysis/generateFollowupQuestion/generatePortfolioQuestions/generateReportSummary",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(llm_call_duration_seconds_bucket[5m])) by (le, operation))",
+          "legendFormat": "p50 {{operation}}",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(llm_call_duration_seconds_bucket[5m])) by (le, operation))",
+          "legendFormat": "p95 {{operation}}",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "LLM call error rate",
+      "type": "timeseries",
+      "description": "outcome=failure로 기록된 Claude 호출(타임아웃/재시도 소진/서킷 오픈 포함) 비율",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
+      "targets": [
+        {
+          "expr": "sum(rate(llm_call_duration_seconds_count{outcome=\"failure\"}[5m])) by (operation) / sum(rate(llm_call_duration_seconds_count[5m])) by (operation)",
+          "legendFormat": "{{operation}}",
+          "refId": "A"
+        }
+      ]
     }
   ]
 }

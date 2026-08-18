@@ -29,7 +29,15 @@ spring:
   config:
     import: optional:application-secret.yml
 
+management:
+  metrics:
+    distribution:
+      percentiles-histogram:
+        llm.call.duration: true
+
 logging:
+  pattern:
+    level: "%5p [%X{requestId}]"
   level:
     org.hibernate.SQL: debug
 

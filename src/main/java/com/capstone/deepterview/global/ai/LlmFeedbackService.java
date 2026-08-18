@@ -3,21 +3,49 @@ package com.capstone.deepterview.global.ai;
 import com.capstone.deepterview.domain.answer.domain.Answer;
 import com.capstone.deepterview.domain.interview.domain.InterviewSession;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class LlmFeedbackService {
 
     private final ChatClient chatClient;
     private final InterviewTools interviewTools;
     private final ObjectMapper objectMapper;
+    private final MeterRegistry meterRegistry;
+
+    // Claude 호출 지연시간(llm.call.duration) 계측 + 시작/완료/실패 로깅을 한 곳에서 처리
+    // requestId/도메인 ID(sessionId 등)는 호출부가 MDC에 미리 심어두면 로그 패턴에 자동 포함
+    private String callChatClient(String operation, Supplier<String> call) {
+        Timer.Sample sample = Timer.start(meterRegistry);
+        String outcome = "success";
+        log.info("LLM 호출 시작 operation={}", operation);
+        try {
+            return call.get();
+        } catch (RuntimeException e) {
+            outcome = "failure";
+            log.error("LLM 호출 실패 operation={}", operation, e);
+            throw e;
+        } finally {
+            sample.stop(Timer.builder("llm.call.duration")
+                    .description("Claude(LLM) 호출 소요시간")
+                    .tag("operation", operation)
+                    .tag("outcome", outcome)
+                    .register(meterRegistry));
+            log.info("LLM 호출 종료 operation={} outcome={}", operation, outcome);
+        }
+    }
 
     public LlmAnalysisResult generateAnalysis(String transcript, String questionText) {
         String prompt = """
@@ -53,11 +81,11 @@ public class LlmFeedbackService {
                 }
                 """.formatted(questionText, transcript);
 
-        String response = chatClient.prompt()
+        String response = callChatClient("generateAnalysis", () -> chatClient.prompt()
                 .user(prompt)
                 .tools(interviewTools)
                 .call()
-                .content();
+                .content());
 
         if (response == null || response.isBlank()) {
             return new LlmAnalysisResult(null, null);
@@ -94,10 +122,10 @@ public class LlmFeedbackService {
                 }
                 """.formatted(questionText, transcript);
 
-        String response = chatClient.prompt()
+        String response = callChatClient("generateFollowupQuestion", () -> chatClient.prompt()
                 .user(prompt)
                 .call()
-                .content();
+                .content());
 
         if (response == null || response.isBlank()) {
             return null;
@@ -132,10 +160,10 @@ public class LlmFeedbackService {
                 }
                 """.formatted(portfolioText);
 
-        String response = chatClient.prompt()
+        String response = callChatClient("generatePortfolioQuestions", () -> chatClient.prompt()
                 .user(prompt)
                 .call()
-                .content();
+                .content());
 
         if (response == null || response.isBlank()) {
             return List.of();
@@ -207,10 +235,10 @@ public class LlmFeedbackService {
                 qaSection
         );
 
-        String response = chatClient.prompt()
+        String response = callChatClient("generateReportSummary", () -> chatClient.prompt()
                 .user(prompt)
                 .call()
-                .content();
+                .content());
 
         if (response == null || response.isBlank()) {
             return new LlmReportSummary(null, null, null, null);

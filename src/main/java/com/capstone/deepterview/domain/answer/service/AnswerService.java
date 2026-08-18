@@ -14,6 +14,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -122,10 +123,16 @@ public class AnswerService {
 			star = existingStar.map(this::toStarView).orElse(null);
 		} else {
 			// DB 커넥션을 점유하지 않은 상태로 Claude 호출 (네트워크 왕복, 도구 호출 시 더 길어질 수 있음)
-			LlmAnalysisResult result = llmFeedbackService.generateAnalysis(
-					answer.getTranscript(),
-					answer.getQuestion().getContent()
-			);
+			MDC.put("answerId", String.valueOf(answerId));
+			LlmAnalysisResult result;
+			try {
+				result = llmFeedbackService.generateAnalysis(
+						answer.getTranscript(),
+						answer.getQuestion().getContent()
+				);
+			} finally {
+				MDC.remove("answerId");
+			}
 
 			AnalysisPersistResult persisted = persistAnalysisResult(answer, result);
 			llm = persisted.llm();

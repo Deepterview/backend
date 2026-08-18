@@ -22,6 +22,7 @@ import java.util.List;
 public class SecurityConfig {
 
 	private final JwtAuthenticationFilter jwtAuthenticationFilter;
+	private final RequestIdFilter requestIdFilter;
 	private final CustomOAuth2UserService customOAuth2UserService;
 	private final OAuth2SuccessHandler oAuth2SuccessHandler;
 	private final SecurityExceptionHandler securityExceptionHandler;
@@ -54,7 +55,8 @@ public class SecurityConfig {
 						.userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
 						.successHandler(oAuth2SuccessHandler)
 				)
-				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+				.addFilterBefore(requestIdFilter, JwtAuthenticationFilter.class);
 
 		return http.build();
 	}
