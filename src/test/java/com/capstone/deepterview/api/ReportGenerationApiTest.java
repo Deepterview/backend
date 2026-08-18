@@ -86,7 +86,7 @@ class ReportGenerationApiTest {
     @DisplayName("POST /report: getAnalysis 호출 후 COMPLETED 세션 → contentScore·grade·텍스트 정상 반환")
     void generateReport_withStarAnalysis_returnsComputedScoresAndSummary() throws Exception {
         String token = loginAndGetToken("report-gen-" + UUID.randomUUID() + "@test.com");
-        JobCategory category = jobCategoryRepository.save(JobCategory.of("백엔드-" + UUID.randomUUID(), "백엔드 개발"));
+        JobCategory category = seededCategory();
         Long sessionId = createSession(token, category.getId());
         Long questionId = getFirstQuestionId(token, sessionId);
         long answerId = submitAnswer(token, questionId);
@@ -120,7 +120,7 @@ class ReportGenerationApiTest {
     @DisplayName("POST /report: 분석 데이터 없이도 리포트 생성 → 점수 null, 텍스트 요약은 정상 반환")
     void generateReport_noAnalysisData_returnsNullScoresWithSummary() throws Exception {
         String token = loginAndGetToken("report-nodata-" + UUID.randomUUID() + "@test.com");
-        JobCategory category = jobCategoryRepository.save(JobCategory.of("PM-" + UUID.randomUUID(), "프로덕트"));
+        JobCategory category = seededCategory();
         Long sessionId = createSession(token, category.getId());
         Long questionId = getFirstQuestionId(token, sessionId);
         submitAnswer(token, questionId);
@@ -141,7 +141,7 @@ class ReportGenerationApiTest {
     @DisplayName("POST /report: 이미 리포트 존재 시 LLM 재호출 없이 기존 리포트 반환")
     void generateReport_calledTwice_doesNotCallLlmAgain() throws Exception {
         String token = loginAndGetToken("report-idem-" + UUID.randomUUID() + "@test.com");
-        JobCategory category = jobCategoryRepository.save(JobCategory.of("프론트-" + UUID.randomUUID(), "프론트엔드"));
+        JobCategory category = seededCategory();
         Long sessionId = createSession(token, category.getId());
         Long questionId = getFirstQuestionId(token, sessionId);
         submitAnswer(token, questionId);
@@ -172,7 +172,7 @@ class ReportGenerationApiTest {
     @DisplayName("POST /report: READY 세션이면 400 VALIDATION_ERROR")
     void generateReport_sessionReady_returns400() throws Exception {
         String token = loginAndGetToken("report-ready-" + UUID.randomUUID() + "@test.com");
-        JobCategory category = jobCategoryRepository.save(JobCategory.of("DevOps-" + UUID.randomUUID(), "DevOps"));
+        JobCategory category = seededCategory();
         Long sessionId = createSession(token, category.getId());
 
         mockMvc.perform(post("/api/v1/sessions/{sessionId}/report", sessionId)
@@ -188,7 +188,7 @@ class ReportGenerationApiTest {
     @DisplayName("POST /report: IN_PROGRESS 세션이면 400 VALIDATION_ERROR")
     void generateReport_sessionInProgress_returns400() throws Exception {
         String token = loginAndGetToken("report-inprog-" + UUID.randomUUID() + "@test.com");
-        JobCategory category = jobCategoryRepository.save(JobCategory.of("QA-" + UUID.randomUUID(), "QA"));
+        JobCategory category = seededCategory();
         Long sessionId = createSession(token, category.getId());
 
         mockMvc.perform(patch("/api/v1/sessions/{sessionId}/start", sessionId)
@@ -207,7 +207,7 @@ class ReportGenerationApiTest {
     @DisplayName("GET /report: POST로 생성 후 GET으로 동일 데이터 조회")
     void getReport_afterPostGeneration_returnsSameData() throws Exception {
         String token = loginAndGetToken("report-get-" + UUID.randomUUID() + "@test.com");
-        JobCategory category = jobCategoryRepository.save(JobCategory.of("데이터-" + UUID.randomUUID(), "데이터"));
+        JobCategory category = seededCategory();
         Long sessionId = createSession(token, category.getId());
         Long questionId = getFirstQuestionId(token, sessionId);
         submitAnswer(token, questionId);
@@ -239,7 +239,7 @@ class ReportGenerationApiTest {
     @DisplayName("GET /report: 리포트 미생성 상태에서 조회 시 404 NOT_FOUND")
     void getReport_reportNotGenerated_returns404() throws Exception {
         String token = loginAndGetToken("report-404-" + UUID.randomUUID() + "@test.com");
-        JobCategory category = jobCategoryRepository.save(JobCategory.of("보안-" + UUID.randomUUID(), "보안"));
+        JobCategory category = seededCategory();
         Long sessionId = createSession(token, category.getId());
         completeSession(token, sessionId);
 
@@ -251,6 +251,13 @@ class ReportGenerationApiTest {
     }
 
     // ── 헬퍼 ───────────────────────────────────────────────────────────────────
+
+    // DataInitializer가 시드하는 QuestionPool을 가진 카테고리를 재사용 — 새로 만든 카테고리는
+    // QuestionPool이 비어 있어 세션 생성이 실패한다.
+    private JobCategory seededCategory() {
+        return jobCategoryRepository.findByName("백엔드 개발")
+                .orElseThrow(() -> new IllegalStateException("DataInitializer 시드 카테고리를 찾을 수 없습니다."));
+    }
 
     private String loginAndGetToken(String email) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/v1/auth/test-login")

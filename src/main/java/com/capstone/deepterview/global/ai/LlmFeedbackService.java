@@ -2,8 +2,13 @@ package com.capstone.deepterview.global.ai;
 
 import com.capstone.deepterview.domain.answer.domain.Answer;
 import com.capstone.deepterview.domain.interview.domain.InterviewSession;
+import com.capstone.deepterview.global.exception.CustomException;
+import com.capstone.deepterview.global.exception.ErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 
@@ -13,12 +18,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class LlmFeedbackService {
 
     private final ChatClient chatClient;
     private final InterviewTools interviewTools;
     private final ObjectMapper objectMapper;
 
+    @CircuitBreaker(name = "claude", fallbackMethod = "generateAnalysisFallback")
+    @Retry(name = "claude")
     public LlmAnalysisResult generateAnalysis(String transcript, String questionText) {
         String prompt = """
                 다음은 면접 질문과 지원자의 답변입니다.
@@ -76,6 +84,13 @@ public class LlmFeedbackService {
         }
     }
 
+    private LlmAnalysisResult generateAnalysisFallback(String transcript, String questionText, Throwable t) {
+        log.warn("Claude 답변 분석 호출 실패, 서킷 오픈/재시도 소진", t);
+        throw new CustomException(ErrorCode.SERVICE_UNAVAILABLE, "AI 분석 서비스가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도해주세요.");
+    }
+
+    @CircuitBreaker(name = "claude", fallbackMethod = "generateFollowupQuestionFallback")
+    @Retry(name = "claude")
     public String generateFollowupQuestion(String transcript, String questionText) {
         String prompt = """
                 다음은 면접 질문과 지원자의 답변입니다.
@@ -117,6 +132,13 @@ public class LlmFeedbackService {
         }
     }
 
+    private String generateFollowupQuestionFallback(String transcript, String questionText, Throwable t) {
+        log.warn("Claude 꼬리질문 생성 호출 실패, 서킷 오픈/재시도 소진", t);
+        throw new CustomException(ErrorCode.SERVICE_UNAVAILABLE, "AI 서비스가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도해주세요.");
+    }
+
+    @CircuitBreaker(name = "claude", fallbackMethod = "generatePortfolioQuestionsFallback")
+    @Retry(name = "claude")
     public List<String> generatePortfolioQuestions(String portfolioText) {
         String prompt = """
                 다음은 지원자의 포트폴리오에서 추출한 내용입니다.
@@ -160,6 +182,13 @@ public class LlmFeedbackService {
         }
     }
 
+    private List<String> generatePortfolioQuestionsFallback(String portfolioText, Throwable t) {
+        log.warn("Claude 포트폴리오 질문 생성 호출 실패, 서킷 오픈/재시도 소진", t);
+        throw new CustomException(ErrorCode.SERVICE_UNAVAILABLE, "AI 서비스가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도해주세요.");
+    }
+
+    @CircuitBreaker(name = "claude", fallbackMethod = "generateReportSummaryFallback")
+    @Retry(name = "claude")
     public LlmReportSummary generateReportSummary(InterviewSession session, List<Answer> answers) {
         StringBuilder qaSection = new StringBuilder();
         AtomicInteger index = new AtomicInteger(1);
@@ -226,5 +255,10 @@ public class LlmFeedbackService {
         } catch (Exception e) {
             return new LlmReportSummary(cleaned, null, null, null);
         }
+    }
+
+    private LlmReportSummary generateReportSummaryFallback(InterviewSession session, List<Answer> answers, Throwable t) {
+        log.warn("Claude 리포트 요약 생성 호출 실패, 서킷 오픈/재시도 소진", t);
+        throw new CustomException(ErrorCode.SERVICE_UNAVAILABLE, "AI 서비스가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도해주세요.");
     }
 }
