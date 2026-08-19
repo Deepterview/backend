@@ -103,7 +103,10 @@ class MemberInterviewApiIntegrationTest {
 	@Test
 	@DisplayName("Interview API 통합 검증: 세션 생성 -> 목록/상세 -> 시작 -> 종료 -> 삭제")
 	void interviewApiFlow() throws Exception {
-		JobCategory category = jobCategoryRepository.save(JobCategory.of("테스트 직군", "통합 테스트용 직군"));
+		// DataInitializer가 시드하는 QuestionPool을 가진 카테고리를 재사용 — 새로 만든 카테고리는
+		// QuestionPool이 비어 있어 세션 생성이 실패한다.
+		JobCategory category = jobCategoryRepository.findByName("백엔드 개발")
+				.orElseThrow(() -> new IllegalStateException("DataInitializer 시드 카테고리를 찾을 수 없습니다."));
 
 		MvcResult loginResult = mockMvc.perform(post("/api/v1/auth/test-login")
 						.contentType(MediaType.APPLICATION_JSON)
