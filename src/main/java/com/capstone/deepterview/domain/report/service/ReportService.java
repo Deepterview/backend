@@ -16,10 +16,12 @@ import com.capstone.deepterview.global.ai.LlmFeedbackService;
 import com.capstone.deepterview.global.ai.LlmReportSummary;
 import com.capstone.deepterview.global.exception.CustomException;
 import com.capstone.deepterview.global.exception.ErrorCode;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 import java.util.Objects;
@@ -27,15 +29,21 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class ReportService {
 
     private final InterviewSessionRepository interviewSessionRepository;
     private final FeedbackReportRepository feedbackReportRepository;
     private final AnswerRepository answerRepository;
     private final LlmFeedbackService llmFeedbackService;
+    private final PlatformTransactionManager transactionManager;
 
-    @Transactional
+    private TransactionTemplate transactionTemplate;
+
+    @PostConstruct
+    void init() {
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
+    }
+
     public SessionReportResponse generateOrGetReport(Long userId, Long sessionId) {
         InterviewSession session = getOwnedSession(userId, sessionId);
 
@@ -64,7 +72,23 @@ public class ReportService {
             MDC.remove("sessionId");
         }
 
-        FeedbackReport report = feedbackReportRepository.save(FeedbackReport.create(
+        FeedbackReport report = persistReport(
+                session, speechScore, nonverbalScore, contentScore, overallScore, grade, summary
+        );
+
+        return SessionReportResponse.of(report);
+    }
+
+    private FeedbackReport persistReport(
+            InterviewSession session,
+            Float speechScore,
+            Float nonverbalScore,
+            Float contentScore,
+            Float overallScore,
+            Grade grade,
+            LlmReportSummary summary
+    ) {
+        return transactionTemplate.execute(status -> feedbackReportRepository.save(FeedbackReport.create(
                 session,
                 speechScore,
                 nonverbalScore,
@@ -75,9 +99,7 @@ public class ReportService {
                 summary.weaknessSummary(),
                 summary.improvementPriority(),
                 summary.aiSummary()
-        ));
-
-        return SessionReportResponse.of(report);
+        )));
     }
 
     private Float computeSpeechScore(List<Answer> answers) {

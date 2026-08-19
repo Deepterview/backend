@@ -94,7 +94,6 @@ public class PortfolioService {
         }
     }
 
-    @Transactional(readOnly = true)
     public PortfolioQuestionsResponse generateQuestions(Long userId, Long portfolioId) {
         Portfolio portfolio = portfolioRepository.findById(portfolioId)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "포트폴리오를 찾을 수 없습니다."));
