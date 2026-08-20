@@ -21,6 +21,7 @@ import com.capstone.deepterview.domain.member.repository.UserRepository;
 import com.capstone.deepterview.global.exception.CustomException;
 import com.capstone.deepterview.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.MDC;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -133,7 +134,6 @@ public class InterviewService {
 				.toList();
 	}
 
-	@Transactional
 	public QuestionResponse getNextQuestion(Long userId, Long sessionId, NextQuestionRequest request) {
 		InterviewSession session = getOwnedSession(userId, sessionId);
 
@@ -155,17 +155,24 @@ public class InterviewService {
 			throw new CustomException(ErrorCode.FORBIDDEN, "해당 세션의 답변이 아닙니다.");
 		}
 
-		String followup = llmFeedbackService.generateFollowupQuestion(
-				answer.getTranscript(),
-				answer.getQuestion().getContent()
-		);
+		// DB 커넥션을 점유하지 않은 상태로 Claude 호출 (네트워크 왕복)
+		MDC.put("sessionId", String.valueOf(sessionId));
+		String followup;
+		try {
+			followup = llmFeedbackService.generateFollowupQuestion(
+					answer.getTranscript(),
+					answer.getQuestion().getContent()
+			);
+		} finally {
+			MDC.remove("sessionId");
+		}
 
 		if (followup == null || followup.isBlank()) {
 			throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR, "꼬리 질문 생성에 실패했습니다.");
 		}
 
-		Question nextQuestion = Question.create(session, followup, QuestionType.FOLLOWUP, nextOrderNum, 120);
-		questionRepository.save(nextQuestion);
+		Question nextQuestion = questionRepository.save(
+				Question.create(session, followup, QuestionType.FOLLOWUP, nextOrderNum, 120));
 
 		return QuestionResponse.from(nextQuestion);
 	}

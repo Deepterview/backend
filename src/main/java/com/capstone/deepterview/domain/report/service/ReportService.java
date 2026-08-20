@@ -16,12 +16,9 @@ import com.capstone.deepterview.global.ai.LlmFeedbackService;
 import com.capstone.deepterview.global.ai.LlmReportSummary;
 import com.capstone.deepterview.global.exception.CustomException;
 import com.capstone.deepterview.global.exception.ErrorCode;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 import java.util.Objects;
@@ -35,14 +32,6 @@ public class ReportService {
     private final FeedbackReportRepository feedbackReportRepository;
     private final AnswerRepository answerRepository;
     private final LlmFeedbackService llmFeedbackService;
-    private final PlatformTransactionManager transactionManager;
-
-    private TransactionTemplate transactionTemplate;
-
-    @PostConstruct
-    void init() {
-        this.transactionTemplate = new TransactionTemplate(transactionManager);
-    }
 
     public SessionReportResponse generateOrGetReport(Long userId, Long sessionId) {
         InterviewSession session = getOwnedSession(userId, sessionId);
@@ -88,7 +77,7 @@ public class ReportService {
             Grade grade,
             LlmReportSummary summary
     ) {
-        return transactionTemplate.execute(status -> feedbackReportRepository.save(FeedbackReport.create(
+        return feedbackReportRepository.save(FeedbackReport.create(
                 session,
                 speechScore,
                 nonverbalScore,
@@ -99,7 +88,7 @@ public class ReportService {
                 summary.weaknessSummary(),
                 summary.improvementPriority(),
                 summary.aiSummary()
-        )));
+        ));
     }
 
     private Float computeSpeechScore(List<Answer> answers) {
