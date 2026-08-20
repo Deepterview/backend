@@ -18,6 +18,7 @@ import com.capstone.deepterview.global.exception.CustomException;
 import com.capstone.deepterview.global.exception.ErrorCode;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -63,7 +64,13 @@ public class ReportService {
         Float overallScore = computeOverallScore(speechScore, nonverbalScore, contentScore);
         Grade grade = computeGrade(overallScore);
 
-        LlmReportSummary summary = llmFeedbackService.generateReportSummary(session, answers);
+        MDC.put("sessionId", String.valueOf(sessionId));
+        LlmReportSummary summary;
+        try {
+            summary = llmFeedbackService.generateReportSummary(session, answers);
+        } finally {
+            MDC.remove("sessionId");
+        }
 
         FeedbackReport report = persistReport(
                 session, speechScore, nonverbalScore, contentScore, overallScore, grade, summary

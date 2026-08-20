@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -105,7 +106,13 @@ public class PortfolioService {
             throw new CustomException(ErrorCode.VALIDATION_ERROR, "텍스트가 추출되지 않은 포트폴리오입니다. 먼저 텍스트를 추출해주세요.");
         }
 
-        List<String> questions = llmFeedbackService.generatePortfolioQuestions(portfolio.getExtractedText());
+        MDC.put("portfolioId", String.valueOf(portfolioId));
+        List<String> questions;
+        try {
+            questions = llmFeedbackService.generatePortfolioQuestions(portfolio.getExtractedText());
+        } finally {
+            MDC.remove("portfolioId");
+        }
 
         if (questions.isEmpty()) {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR, "면접 질문 생성에 실패했습니다.");

@@ -29,6 +29,11 @@ spring:
   config:
     import: optional:application-secret.yml
 
+management:
+  metrics:
+    distribution:
+      percentiles-histogram:
+        llm.call.duration: true
   http:
     client:
       connect-timeout: 3s
@@ -63,6 +68,8 @@ resilience4j:
           - org.springframework.web.client.HttpClientErrorException
 
 logging:
+  pattern:
+    level: "%5p [%X{requestId}]"
   level:
     org.hibernate.SQL: debug
 
