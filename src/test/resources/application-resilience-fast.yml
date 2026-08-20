@@ -1,0 +1,27 @@
+spring:
+  http:
+    client:
+      factory: simple
+      connect-timeout: 200ms
+      read-timeout: 500ms
+  ai:
+    retry:
+      max-attempts: 1
+
+tavily:
+  connect-timeout-ms: 200
+  read-timeout-ms: 500
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      claude:
+        wait-duration-in-open-state: 1s
+      tavily:
+        wait-duration-in-open-state: 1s
+  retry:
+    instances:
+      claude:
+        wait-duration: 100ms
+      tavily:
+        wait-duration: 100ms

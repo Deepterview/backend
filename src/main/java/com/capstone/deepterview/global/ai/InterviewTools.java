@@ -18,20 +18,26 @@ import java.util.Map;
 public class InterviewTools {
 
     private final String tavilyApiKey;
+    private final String tavilyBaseUrl;
     private final RestClient restClient;
 
-    public InterviewTools(@Value("${tavily.api-key}") String tavilyApiKey) {
+    public InterviewTools(
+            @Value("${tavily.api-key}") String tavilyApiKey,
+            @Value("${tavily.base-url:https://api.tavily.com}") String tavilyBaseUrl,
+            @Value("${tavily.connect-timeout-ms:2000}") int connectTimeoutMs,
+            @Value("${tavily.read-timeout-ms:5000}") int readTimeoutMs) {
         this.tavilyApiKey = tavilyApiKey;
+        this.tavilyBaseUrl = tavilyBaseUrl;
 
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(2_000);
-        requestFactory.setReadTimeout(5_000);
+        requestFactory.setConnectTimeout(connectTimeoutMs);
+        requestFactory.setReadTimeout(readTimeoutMs);
         this.restClient = RestClient.builder().requestFactory(requestFactory).build();
     }
 
     @Tool(description = "면접 답변에서 언급된 기술 키워드를 검색해서 관련 개념과 모범 답변 기준을 반환합니다.")
-    @CircuitBreaker(name = "tavily", fallbackMethod = "searchTechDocsFallback")
-    @Retry(name = "tavily")
+    @CircuitBreaker(name = "tavily")
+    @Retry(name = "tavily", fallbackMethod = "searchTechDocsFallback")
     public String searchTechDocs(String keyword) {
         log.info("Tool 호출됨! keyword: {}", keyword);
 
@@ -45,7 +51,7 @@ public class InterviewTools {
 
         log.info("Tavily API 호출 시도");
         TavilyResponse response = restClient.post()
-            .uri("https://api.tavily.com/search")
+            .uri(tavilyBaseUrl + "/search")
             .contentType(MediaType.APPLICATION_JSON)
             .body(requestBody)
             .retrieve()
