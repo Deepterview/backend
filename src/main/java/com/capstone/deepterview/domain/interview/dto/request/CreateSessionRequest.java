@@ -20,7 +20,9 @@ public record CreateSessionRequest(
 
 		@Min(value = 1, message = "totalQuestions는 1 이상이어야 합니다.")
 		@Max(value = 10, message = "totalQuestions는 10 이하여야 합니다.")
-		int totalQuestions
+		int totalQuestions,
+
+		Long portfolioId
 ) {
 }
 

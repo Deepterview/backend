@@ -10,6 +10,8 @@ import com.capstone.deepterview.domain.portfolio.repository.PortfolioRepository;
 import com.capstone.deepterview.global.ai.LlmFeedbackService;
 import com.capstone.deepterview.global.exception.CustomException;
 import com.capstone.deepterview.global.exception.ErrorCode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -17,7 +19,9 @@ import org.apache.pdfbox.text.PDFTextStripper;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -35,9 +39,18 @@ public class PortfolioService {
     private final UserRepository userRepository;
     private final PortfolioRepository portfolioRepository;
     private final LlmFeedbackService llmFeedbackService;
+    private final ObjectMapper objectMapper;
+    private final PlatformTransactionManager transactionManager;
 
     @Value("${app.file.portfolio-storage-dir}")
     private String portfolioStorageDir;
+
+    private TransactionTemplate transactionTemplate;
+
+    @PostConstruct
+    void init() {
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
+    }
 
     @Transactional
     public PortfolioUploadResponse uploadPortfolio(Long userId, MultipartFile file) {
@@ -118,7 +131,21 @@ public class PortfolioService {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR, "면접 질문 생성에 실패했습니다.");
         }
 
+        String questionsJson = writeQuestionsJson(questions);
+        transactionTemplate.executeWithoutResult(status -> {
+            portfolio.updateGeneratedQuestions(questionsJson);
+            portfolioRepository.save(portfolio);
+        });
+
         return new PortfolioQuestionsResponse(portfolio.getId(), questions);
+    }
+
+    private String writeQuestionsJson(List<String> questions) {
+        try {
+            return objectMapper.writeValueAsString(questions);
+        } catch (Exception e) {
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR, "면접 질문 저장에 실패했습니다.");
+        }
     }
 
     private String storePortfolioFile(MultipartFile file) {

@@ -16,5 +16,7 @@ public interface QuestionRepository extends JpaRepository<Question, Long> {
 
 	@Query("SELECT q FROM Question q JOIN FETCH q.session s JOIN FETCH s.user WHERE q.id = :id")
 	Optional<Question> findByIdWithSessionUser(@Param("id") Long id);
+
+	Optional<Question> findBySessionIdAndOrderNum(Long sessionId, int orderNum);
 }
 
