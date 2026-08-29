@@ -5,6 +5,7 @@ public enum QuestionType {
 	BEHAVIORAL,
 	SITUATIONAL,
 	EXPERIENCE,
-	FOLLOWUP
+	FOLLOWUP,
+	PORTFOLIO
 }
 

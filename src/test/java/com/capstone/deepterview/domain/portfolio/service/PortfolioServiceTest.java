@@ -8,6 +8,7 @@ import com.capstone.deepterview.domain.portfolio.dto.response.PortfolioQuestions
 import com.capstone.deepterview.domain.portfolio.repository.PortfolioRepository;
 import com.capstone.deepterview.global.ai.LlmFeedbackService;
 import com.capstone.deepterview.global.exception.CustomException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -20,8 +21,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -30,7 +33,9 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -45,6 +50,12 @@ class PortfolioServiceTest {
     @Mock
     private LlmFeedbackService llmFeedbackService;
 
+    @Spy
+    private ObjectMapper objectMapper = new ObjectMapper();
+
+    @Mock
+    private PlatformTransactionManager transactionManager;
+
     @InjectMocks
     private PortfolioService portfolioService;
 
@@ -57,6 +68,8 @@ class PortfolioServiceTest {
     void setUp() {
         user = User.of("portfolio-test@example.com", "Tester", null);
         ReflectionTestUtils.setField(user, "id", 1L);
+        portfolioService.init();
+        lenient().when(transactionManager.getTransaction(any())).thenReturn(null);
     }
 
     @Test
@@ -105,6 +118,7 @@ class PortfolioServiceTest {
 
         assertThat(response.portfolioId()).isEqualTo(20L);
         assertThat(response.questions()).isEqualTo(expected);
+        assertThat(portfolio.getGeneratedQuestionsJson()).contains("질문1", "질문5");
     }
 
     @Test

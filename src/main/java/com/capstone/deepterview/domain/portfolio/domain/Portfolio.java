@@ -27,6 +27,9 @@ public class Portfolio extends BaseTimeEntity {
     @Column(name = "is_scanned")
     private Boolean isScanned;
 
+    @Lob
+    private String generatedQuestionsJson;
+
     protected Portfolio() {
     }
 
@@ -40,5 +43,9 @@ public class Portfolio extends BaseTimeEntity {
     public void updateExtractedText(String extractedText, boolean isScanned) {
         this.extractedText = extractedText;
         this.isScanned = isScanned;
+    }
+
+    public void updateGeneratedQuestions(String generatedQuestionsJson) {
+        this.generatedQuestionsJson = generatedQuestionsJson;
     }
 }
