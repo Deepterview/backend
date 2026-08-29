@@ -23,7 +23,7 @@ public class Question extends BaseTimeEntity {
 	private InterviewSession session;
 
 	@Lob
-	@Column(nullable = false)
+	@Column(columnDefinition = "TEXT", nullable = false)
 	private String content;
 
 	@Enumerated(EnumType.STRING)
