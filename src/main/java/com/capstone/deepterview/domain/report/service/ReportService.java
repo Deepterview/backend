@@ -16,8 +16,10 @@ import com.capstone.deepterview.global.ai.LlmFeedbackService;
 import com.capstone.deepterview.global.ai.LlmReportSummary;
 import com.capstone.deepterview.global.exception.CustomException;
 import com.capstone.deepterview.global.exception.ErrorCode;
+import com.capstone.deepterview.global.util.SingleFlight;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.MDC;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -33,6 +35,8 @@ public class ReportService {
     private final AnswerRepository answerRepository;
     private final LlmFeedbackService llmFeedbackService;
 
+    private final SingleFlight<Long, FeedbackReport> reportFlight = new SingleFlight<>();
+
     public SessionReportResponse generateOrGetReport(Long userId, Long sessionId) {
         InterviewSession session = getOwnedSession(userId, sessionId);
 
@@ -43,6 +47,18 @@ public class ReportService {
 
         if (session.getStatus() != SessionStatus.COMPLETED) {
             throw new CustomException(ErrorCode.VALIDATION_ERROR, "완료된 세션만 리포트를 생성할 수 있습니다.");
+        }
+
+        FeedbackReport report = reportFlight.execute(sessionId, () -> generateAndPersist(session));
+        return SessionReportResponse.of(report);
+    }
+
+    private FeedbackReport generateAndPersist(InterviewSession session) {
+        Long sessionId = session.getId();
+        // 앞선 요청이 방금 저장을 끝낸 경우 Claude를 다시 호출하지 않는다
+        Optional<FeedbackReport> saved = feedbackReportRepository.findBySession_Id(sessionId);
+        if (saved.isPresent()) {
+            return saved.get();
         }
 
         List<Answer> answers = answerRepository.findBySessionIdWithAnalyses(sessionId);
@@ -61,11 +77,13 @@ public class ReportService {
             MDC.remove("sessionId");
         }
 
-        FeedbackReport report = persistReport(
-                session, speechScore, nonverbalScore, contentScore, overallScore, grade, summary
-        );
-
-        return SessionReportResponse.of(report);
+        try {
+            return persistReport(
+                    session, speechScore, nonverbalScore, contentScore, overallScore, grade, summary
+            );
+        } catch (DataIntegrityViolationException e) {
+            return feedbackReportRepository.findBySession_Id(sessionId).orElseThrow(() -> e);
+        }
     }
 
     private FeedbackReport persistReport(

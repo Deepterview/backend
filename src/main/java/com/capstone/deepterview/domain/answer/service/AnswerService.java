@@ -10,12 +10,14 @@ import com.capstone.deepterview.global.ai.LlmFeedbackService;
 import com.capstone.deepterview.global.exception.BusinessException;
 import com.capstone.deepterview.global.exception.CustomException;
 import com.capstone.deepterview.global.exception.ErrorCode;
+import com.capstone.deepterview.global.util.SingleFlight;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,6 +49,8 @@ public class AnswerService {
 	private String answerStorageDir;
 
 	private TransactionTemplate transactionTemplate;
+
+	private final SingleFlight<Long, AnalysisPersistResult> analysisFlight = new SingleFlight<>();
 
 	@PostConstruct
 	void init() {
@@ -122,19 +126,7 @@ public class AnswerService {
 			llm = toLlmView(existingLlm.get());
 			star = existingStar.map(this::toStarView).orElse(null);
 		} else {
-			// DB 커넥션을 점유하지 않은 상태로 Claude 호출 (네트워크 왕복, 도구 호출 시 더 길어질 수 있음)
-			MDC.put("answerId", String.valueOf(answerId));
-			LlmAnalysisResult result;
-			try {
-				result = llmFeedbackService.generateAnalysis(
-						answer.getTranscript(),
-						answer.getQuestion().getContent()
-				);
-			} finally {
-				MDC.remove("answerId");
-			}
-
-			AnalysisPersistResult persisted = persistAnalysisResult(answer, result);
+			AnalysisPersistResult persisted = analysisFlight.execute(answerId, () -> generateAndPersist(answer));
 			llm = persisted.llm();
 			star = persisted.star();
 		}
@@ -148,6 +140,41 @@ public class AnswerService {
 				nonverbal,
 				llm
 		);
+	}
+
+	private AnalysisPersistResult generateAndPersist(Answer answer) {
+		Long answerId = answer.getId();
+
+		Optional<AnalysisPersistResult> saved = loadExisting(answerId);
+		if (saved.isPresent()) {
+			return saved.get();
+		}
+
+		// DB 커넥션을 점유하지 않은 상태로 Claude 호출 (네트워크 왕복, 도구 호출 시 더 길어질 수 있음)
+		MDC.put("answerId", String.valueOf(answerId));
+		LlmAnalysisResult result;
+		try {
+			result = llmFeedbackService.generateAnalysis(
+					answer.getTranscript(),
+					answer.getQuestion().getContent()
+			);
+		} finally {
+			MDC.remove("answerId");
+		}
+
+		try {
+			return persistAnalysisResult(answer, result);
+		} catch (DataIntegrityViolationException e) {
+			return loadExisting(answerId).orElseThrow(() -> e);
+		}
+	}
+
+	private Optional<AnalysisPersistResult> loadExisting(Long answerId) {
+		return llmFeedbackRepository.findByAnswer_Id(answerId)
+				.map(llm -> new AnalysisPersistResult(
+						toLlmView(llm),
+						starAnalysisRepository.findByAnswer_Id(answerId).map(this::toStarView).orElse(null)
+				));
 	}
 
 	private AnalysisPersistResult persistAnalysisResult(Answer answer, LlmAnalysisResult result) {
