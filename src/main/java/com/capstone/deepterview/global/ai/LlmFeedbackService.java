@@ -66,6 +66,8 @@ public class LlmFeedbackService {
                 답변이 짧거나 불완전하더라도 주어진 내용으로 반드시 피드백을 제공하세요.
                 반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트는 절대 포함하지 마세요.
                 점수는 0.0~10.0 사이의 소수로 작성하세요.
+                strength, weakness, improvement는 배열이 아닌 하나의 문자열로 작성하고, 각각 핵심 3가지 이내로 간결하게 작성하세요.
+                STAR 항목별 피드백(situationFeedback, taskFeedback, actionDetail, resultFeedback)은 각각 2문장 이내로 작성하세요.
 
                 {
                   "feedback": {
