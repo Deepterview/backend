@@ -81,13 +81,15 @@ class StarScoreEvalTest {
             List<Double> totals = new ArrayList<>();
             int parseFailures = 0;
             for (int run = 1; run <= RUNS_PER_SCENARIO; run++) {
-                LlmAnalysisResult.StarPart star = llmFeedbackService
-                        .generateAnalysis(scenario.answer(), scenario.question())
-                        .star();
+                LlmAnalysisResult result = llmFeedbackService.generateAnalysis(scenario.answer(), scenario.question());
+                LlmAnalysisResult.StarPart star = result.star();
 
                 if (star == null) {
                     parseFailures++;
-                    System.out.printf("[%s] %d회차  STAR 파싱 실패 — 통계에서 제외%n", scenario.id(), run);
+                    // 파싱 실패 시 generateAnalysis는 응답 원문을 feedback.strength에 담아 반환
+                    String raw = result.feedback() != null ? result.feedback().strength() : null;
+                    System.out.printf("[%s] %d회차  STAR 파싱 실패 — 통계에서 제외%n  응답 원문: %s%n",
+                            scenario.id(), run, raw);
                     continue;
                 }
 
